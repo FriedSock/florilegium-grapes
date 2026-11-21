@@ -19,6 +19,7 @@
 %%   \usepackage[nomargin]{florilegium} no margin, only \florilegiumdraw
 %%   \usepackage[grown,novisitors]{florilegium}  no visitors (insects, snails, birds)
 %%   \usepackage[grown,noshells]{florilegium}    no shells on the margin's ground
+%%   \usepackage[grown,vine=pinot]{florilegium}  nothing but one grapevine of that variety
 %%   \usepackage[grown,sections]{florilegium}    a flower beside every numbered \section
 %%                                      and \subsection (standard classes)
 %%   \usepackage[grown,headpieces]{florilegium}  a headpiece of Gothic tracery over every
@@ -126,6 +127,7 @@
 \def\florilegium@set@theme#1{\def\florilegium@theme{#1}}
 \def\florilegium@set@density#1{\def\florilegium@density{#1}}
 \def\florilegium@set@intensity#1{\def\florilegium@intensity{#1}}
+\def\florilegium@vine{}\def\florilegium@set@vine#1{\def\florilegium@vine{#1}}
 \ProcessOptions\relax
 \ifdefined\florilegiumseed\else\def\florilegiumseed{}\fi
 
@@ -155,6 +157,9 @@
   \ifx\@nodocument\relax\directlua{florilegium.mark("theme", "\luaescapestring{#1}")}%
   \else\directlua{florilegium.theme = "\luaescapestring{#1}"}\fi}
 \ifx\florilegium@theme\@empty\else\expandafter\florilegiumtheme\expandafter{\florilegium@theme}\fi
+%% the vine: theme vine, a grown margin of one grapevine of this variety (florilegium-theme-vine.lua)
+\ifx\florilegium@vine\@empty\else
+  \directlua{florilegium.vine = "\luaescapestring{\florilegium@vine}"}\florilegiumtheme{vine}\fi
 %% the margin off and on: in the preamble from the first page; in the text a mark, as the
 %% theme's, so that the margin stops or starts with the page that the mark is on. The option
 %% nomargin installs no margin at all, so there is nothing to switch

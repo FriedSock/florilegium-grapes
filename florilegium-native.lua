@@ -615,6 +615,8 @@ function M.fruit(fu)
     taper(0.06, 0.15, 0.1, 0.4, 0.08, 0.7, 0.02, 0.95, 0.025, 0.004) fill(WHITE, 0.4)
   elseif fr == "pappus" then
     ink.push() ink.translate(0, 0.5) clock() ink.pop()
+  elseif fr == "grape" then
+    M.grape(0, 0.5, 0.36, 90, 100)
   elseif fr == "silique" then
     M.leaflet({ W = 0.07, tone = range(0.3, 0.4), u = fu })
   elseif fr == "silicle" then
@@ -1374,6 +1376,25 @@ local function ellipse(cx, cy, ax, ay, bx, by)
   close()
 end
 local function atan2(y, x) return math.atan(y, x) / RAD end
+-- \flo@vgrape: one grape at (x, y) in its own colors, not the ink's: blue-black, red or
+-- yellow-green by the variety, p percent of that (the rest black, for the grapes further
+-- back), a dusty bloom on its skin, a highlight up and to the left, a darker rim; r its half
+-- width, its length along direction a (degrees). No draws
+local GRAPE = { asp = { round = 1, oval = 1.2, long = 1.45 },
+  rgb = { dark = { 0.2, 0.12, 0.24 }, red = { 0.55, 0.16, 0.24 }, pale = { 0.72, 0.76, 0.4 } },
+  bloom = { dark = { 0.62, 0.66, 0.8 }, red = { 0.85, 0.7, 0.75 }, pale = { 0.92, 0.94, 0.8 } },
+  shade = { 30, 15, 0 } }
+local function mix(c, p) return { c[1] * p / 100, c[2] * p / 100, c[3] * p / 100 } end
+function M.grape(x, y, r, a, p)
+  local base = GRAPE.rgb[S.berrytone]
+  local h = r * GRAPE.asp[S.berryshape]
+  local ca, sa = cos(a), sin(a)
+  ellipse(x, y, h * ca, h * sa, -r * sa, r * ca) fill(mix(base, p), 1)
+  ellipse(x - 0.12 * r, y + 0.12 * r, 0.8 * h * ca, 0.8 * h * sa, -0.8 * r * sa, 0.8 * r * ca)
+  fill(GRAPE.bloom[S.berrytone], 0.22)
+  ellipse(x - 0.38 * r, y + 0.38 * r, 0.18 * r, 0, 0, 0.14 * r) fill(WHITE, 0.75)
+  ellipse(x, y, h * ca, h * sa, -r * sa, r * ca) stroke(mix(base, 40), 0.2, 0.8, false)
+end
 -- \flo@walk: n steps from (x, y), heading h turning by dh in all, len long; the n+1 points
 local function walk(x, y, h, dh, len, n)
   local pts, ds = { { x, y } }, len / n
@@ -1697,6 +1718,67 @@ local function thyrse(len, st)
   fadd(list, A[25][1], A[25][2], ah - 90, 0.6 * fd, st - 0.75)
   fdraw(list)
 end
+-- \flo@grapeunit: a bunch of grapes as a vine carries one, the stalk len sized: a short
+-- stalk that hooks over to one side, then the bunch hangs straight down the page (swaying a little), a branched stalk
+-- whose side branches shorten toward its tip (cone-shaped), stay long (cylindrical), or one
+-- long branch near the top carries a wing of its own (shouldered). A grape at each branch's
+-- end, one partway along the longer ones, one on the stalk at each level and one at its tip,
+-- each on a pedicel; loose bunches have gaps. The grapes are gathered first and painted in
+-- three depths, the furthest smallest and darkest
+local WINGX, WINGY = { -0.9, 0.9, 0, 0 }, { 0, 0, -1.5, 0.4 }
+local function grapes(len)
+  local c, b = S.compact, S.bunch
+  local ws = chance(0.5) and 1 or -1
+  local ped = walk(0, 0, 90 + sym(10), ws * range(90, 120), 0.3 * len, 6)
+  stem(ped, 0.035, 0.024, 0.1)
+  ink.push()
+  ink.translate(ped[7][1], ped[7][2])
+  upright()
+  local sway = 270 + sym(10)
+  local H = len * (b == "cylindrical" and 0.68 or 0.62)
+  local r = 0.058 * len
+  local ux, uy = cos(sway), sin(sway)
+  local spine = {}
+  for i = 0, 10 do spine[i + 1] = { 0.1 * i * H * ux, 0.1 * i * H * uy } end
+  stem(spine, 0.022, 0.01, 0.12)
+  local B = {}
+  local function add(x, y, a)
+    if c == 1 and chance(0.25) then return end
+    local gx, gy, gr = x + sym(0.2) * r, y + sym(0.2) * r, r * range(0.9, 1.05)
+    local z = int(1, 3)
+    B[#B + 1] = { gx, gy, gr, a, z, 100 - GRAPE.shade[z] - int(0, 8) }
+  end
+  local nb = 5 + c
+  for i = 1, nb do
+    local t = (i - 0.5) / nb
+    local rx, ry = t * H * ux, t * H * uy
+    local w = 1 - 0.85 * t
+    if b == "cylindrical" then w = 8 * i - 4 < 6 * nb and 0.8 or 0.8 - 1.6 * (t - 0.75) end
+    local W = 0.24 * len * w * (c == 1 and 1.15 or 1)
+    for k = 0, 1 do
+      local ba = sway + (k == 0 and -1 or 1) * range(50, 70)
+      local bl = W * range(0.75, 1.05)
+      local ex, ey = rx + bl * cos(ba), ry + bl * sin(ba)
+      hair(rx, ry, ex, ey)
+      add(ex, ey, ba)
+      if 20 * i - 10 < 14 * nb then add(rx + 0.5 * bl * cos(ba), ry + 0.5 * bl * sin(ba), ba) end
+    end
+    add(rx, ry, sway)
+    if b == "winged" and i == 2 then
+      local wa = sway + ws * range(55, 65)
+      local ex, ey = rx + 0.42 * len * cos(wa), ry + 0.42 * len * sin(wa)
+      hair(rx, ry, ex, ey)
+      for k = 1, 4 do add(ex + WINGX[k] * r, ey + WINGY[k] * r, wa) end
+    end
+  end
+  add(H * ux, H * uy, sway)
+  for z = 1, 3 do
+    for _, g in ipairs(B) do
+      if g[5] == z then M.grape(g[1], g[2], (0.85 + 0.05 * z) * g[3], g[4], g[6]) end
+    end
+  end
+  ink.pop()
+end
 -- \flo@corymbunit: stalks of falling length, the flowers level at the top; fd the flowers' size;
 -- none at length 0 (its width divides)
 local function corymb(len, fd, st)
@@ -1848,7 +1930,7 @@ end
 
 -- ---------------------------------------------------------------- the inflorescence
 -- \flo@unitdraw: the species' inflorescence at scale k, at the origin along +y; st the
--- stage of its oldest flower
+-- stage of its oldest flower; a grapevine's is a bunch once its flowers are past their best
 function M.unit(k, st)
   local was = pen.accent
   local fd = fdiam(k)
@@ -1860,7 +1942,8 @@ function M.unit(k, st)
     if f == "raceme" then raceme(L, 0.3, 40, st)
     elseif f == "spike" then spike(L, st)
     elseif f == "panicle" then panicle(L, st)
-    elseif f == "thyrse" then thyrse(L, st)
+    elseif f == "thyrse" then
+      if S.fruit == "grape" and st > 1 then grapes(L) else thyrse(L, st) end
     elseif f == "monochasium" then monochasium(L, st)
     elseif f == "catkin" then catkin(0.3 * L, st)
     elseif f == "dichasium" then dichasium(0.8 * L, st)

@@ -107,6 +107,13 @@ if arg[1] == "draw" then
       pic(fmt("florilegium inflorescence={seed=%d, role=any, scale=1.2, season=%s}", seed, season))
     end
   end
+  -- a grapevine's bunch in fruit, one of every variety (gewurztraminer's grapes are red)
+  for _, want in ipairs({ "pinot", "saperavi", "gewurztraminer", "rkatsiteli", "regent", "johanniter", "red" }) do
+    local seed = 1
+    local function ok(sp) return sp.variety == want or sp.berrytone == want end
+    while not ok(species.sample(seed, "grape")) do seed = seed + 1 end
+    pic(fmt("florilegium inflorescence={seed=%d, role=grape, scale=1.2, season=1.3}", seed))
+  end
   -- every view of a flower: each form drawn in profile, a flat-faced tube held sideways,
   -- flowers at a tilt and from behind, a nodding lily, pea flowers (with guides, and in a
   -- head), two-lipped flowers (with dots, with lines and stamens that stand out), irises

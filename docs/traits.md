@@ -13,7 +13,8 @@ This page is written by `tools/tikztables.lua` from `florilegium-species.lua`.
 
 | trait | what it may be |
 |---|---|
-| `plan` | `borage`, `catkin`, `columbine`, `daisy`, `eudicot`, `fern`, `heath`, `iris`, `lily`, `mint`, `monocot`, `mustard`, `pea`, `rose`, `umbellifer` |
+| `plan` | `borage`, `catkin`, `columbine`, `daisy`, `eudicot`, `fern`, `grape`, `heath`, `iris`, `lily`, `mint`, `monocot`, `mustard`, `pea`, `rose`, `umbellifer` |
+| `variety` | `gewurztraminer`, `johanniter`, `none`, `pinot`, `regent`, `rkatsiteli`, `saperavi` |
 | `syndrome` | `bee`, `beetle`, `bird`, `butterfly`, `fly`, `moth`, `none`, `wind` |
 | `color` | `blue`, `green`, `orange`, `pink`, `red`, `violet`, `white`, `yellow` |
 | `form` | `bilabiate`, `campanulate`, `cruciform`, `funnelform`, `head`, `iris`, `lily`, `none`, `orchid`, `papilionaceous`, `rosaceous`, `rotate`, `salverform`, `spurred`, `tubular`, `urceolate` |
@@ -66,8 +67,12 @@ This page is written by `tools/tikztables.lua` from `florilegium-species.lua`.
 | `section` | `prickly`, `ribbed`, `round`, `square` |
 | `hairy` | a whole number from 0 to 1 |
 | `tendrils` | a whole number from 0 to 1 |
-| `fruit` | `achene`, `berry`, `capsule`, `drupe`, `follicle`, `hip`, `legume`, `nut`, `nutlets`, `pappus`, `pome`, `samara`, `schizocarp`, `silicle`, `silique`, `spores` |
+| `fruit` | `achene`, `berry`, `capsule`, `drupe`, `follicle`, `grape`, `hip`, `legume`, `nut`, `nutlets`, `pappus`, `pome`, `samara`, `schizocarp`, `silicle`, `silique`, `spores` |
 | `phenology` | a number from -0.15 to 0.15 |
+| `berrytone` | `dark`, `none`, `pale`, `red` |
+| `berryshape` | `none`, `oval`, `round` |
+| `bunch` | `conical`, `cylindrical`, `none`, `winged` |
+| `compact` | a whole number from 0 to 3 |
 | `division` | a whole number from 0 to 3 |
 | `pinnae` | a whole number from 0 to 26 |
 | `outline` | `deltoid`, `lanceolate`, `none`, `oblong`, `ovate` |

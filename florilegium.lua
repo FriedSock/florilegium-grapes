@@ -12,7 +12,7 @@ local M = { ink = ink, flora = flora }
 -- a newer florilegium.sty and florilegium.lua beside the document); check_versions
 -- stops such a mix before anything is drawn. A release changes all of them together.
 M.version = "2.1.0"
-local PARTS = { "ink", "flora", "grow", "authored", "figures", "theme-geometric", "theme-math", "theme-shells", "initial", "svg",
+local PARTS = { "ink", "flora", "grow", "authored", "figures", "theme-geometric", "theme-math", "theme-shells", "theme-vine", "initial", "svg",
   "species", "pgfmath", "native", "tracery", "shell" }
 
 local function where(file, format, module)     -- " (path)" for the message, if it can be found
@@ -587,6 +587,7 @@ end
 -- clip reach past the paper's edge; LuaLaTeX never sets it
 M.visitors = true
 M.shells = true
+M.vine = nil                                  -- option vine=<variety>: theme vine's grape (florilegium-theme-vine.lua)
 M.bleed = 0
 function M.grown(seed, spill, spilly, box)
   local g = M.geometry()
@@ -596,6 +597,7 @@ function M.grown(seed, spill, spilly, box)
   g.seed, g.spill, g.spilly, g.visitors, g.age, g.theme = seed, spill, spilly, M.visitors, M.age, usable_theme()
   g.shells = M.shells
   g.docseed = M.docseed
+  g.vine = M.vine
   g.headpiece = function(mk, leaf) return headpiece_at(mk, g, leaf) end
   if M.bleed > 0 then g.bleed = M.bleed end
   if not M.theme or M.theme == "flora" then use_organs() end
@@ -635,7 +637,8 @@ M.authored = guarded(M.authored)
 -- load the rest of the package now, so that a mixed set stops in the preamble and not
 -- halfway through a page (florilegium-initial waits for the first initial; florilegium-svg
 -- runs only outside TeX, where it loads this file and so is checked here too)
-for _, part in ipairs({ "grow", "authored", "figures", "theme-geometric", "theme-math", "theme-shells", "tracery", "shell" }) do
+for _, part in ipairs({ "grow", "authored", "figures", "theme-geometric", "theme-math", "theme-shells", "theme-vine", "tracery",
+  "shell" }) do
   require("florilegium-" .. part)
 end
 M.check_versions()

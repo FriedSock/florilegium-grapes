@@ -617,6 +617,8 @@
       \flo@vfill{white}{0.4}{0}{\flo@vtaper{0.06}{0.15}{0.1}{0.4}{0.08}{0.7}{0.02}{0.95}}\end{pgfscope}%
   \else\def\flo@tmp{pappus}\ifx\flo@fr\flo@tmp
     \begin{pgfscope}\pgftransformshift{\flo@P0{0.5}}\flo@vclock\end{pgfscope}%
+  \else\def\flo@tmp{grape}\ifx\flo@fr\flo@tmp
+    \flo@vgrape{0}{0.5}{0.36}{90}{100}%
   \else
     % a pod (silique), a round pod (silicle), paired mericarps, or a seed: leaflet blades
     \def\flo@vl@tone{}\edef\flo@vl@u{\flo@fu}%
@@ -630,7 +632,7 @@
     \else
       \begin{pgfscope}\pgftransformscale{0.55}\def\flo@vl@W{0.22}\flo@range\flo@vl@tone{0.12}{0.2}\flo@vleaflet\end{pgfscope}%
     \fi\fi\fi
-  \fi\fi\fi}
+  \fi\fi\fi\fi}
 % a seed clock (flora.seedhead), radius 1 around the origin: hairline rays, each ending
 % in a tuft, a gap where seeds have gone, a small dark head
 \def\flo@vclock{%
@@ -1587,6 +1589,114 @@
 % catkins: two to four hanging from a short twig of #1 cm, each a stalk that bends over
 % and a tapering tassel of overlapping scales with anthers at their tips, short and tight
 % while young; in fruit, the fruit instead
+% one grape at (#1,#2) in its own colors, not the ink's: blue-black, red or yellow-green by
+% the variety, #5 percent of that (the rest black, for the grapes further back), a dusty
+% bloom on its skin, a highlight up and to the left, a darker rim; #3 its half width, its
+% length along direction #4 (degrees). No draws (native: M.grape)
+\def\flo@gpasp{\edef\flo@gpbs{\flo@get{berryshape}}\def\flo@gpa{1}%
+  \def\flo@tmp{oval}\ifx\flo@gpbs\flo@tmp\def\flo@gpa{1.2}\fi
+  \def\flo@tmp{long}\ifx\flo@gpbs\flo@tmp\def\flo@gpa{1.45}\fi}
+\def\flo@gpcolors{\edef\flo@gpbt{\flo@get{berrytone}}%
+  \def\flo@tmp{dark}\ifx\flo@gpbt\flo@tmp
+    \definecolor{flo@gpbase}{rgb}{0.2,0.12,0.24}\definecolor{flo@gpbloom}{rgb}{0.62,0.66,0.8}\fi
+  \def\flo@tmp{red}\ifx\flo@gpbt\flo@tmp
+    \definecolor{flo@gpbase}{rgb}{0.55,0.16,0.24}\definecolor{flo@gpbloom}{rgb}{0.85,0.7,0.75}\fi
+  \def\flo@tmp{pale}\ifx\flo@gpbt\flo@tmp
+    \definecolor{flo@gpbase}{rgb}{0.72,0.76,0.4}\definecolor{flo@gpbloom}{rgb}{0.92,0.94,0.8}\fi}
+\def\flo@vgrape#1#2#3#4#5{%
+  \flo@gpcolors\flo@gpasp
+  \edef\flo@gpx{#1}\edef\flo@gpy{#2}\edef\flo@gpr{#3}\edef\flo@gpd{#4}\edef\flo@gpp{#5}%
+  \flo@calc\flo@gph{\flo@gpr*\flo@gpa}%
+  \flo@calc\flo@gpax{\flo@gph*cos(\flo@gpd)}\flo@calc\flo@gpay{\flo@gph*sin(\flo@gpd)}%
+  \flo@calc\flo@gpbx{-\flo@gpr*sin(\flo@gpd)}\flo@calc\flo@gpby{\flo@gpr*cos(\flo@gpd)}%
+  \colorlet{flo@c}{flo@gpbase!\flo@gpp!black}%
+  \flo@vfill{flo@c}{1}{0}{\pgfpathellipse{\flo@P\flo@gpx\flo@gpy}{\flo@P\flo@gpax\flo@gpay}{\flo@P\flo@gpbx\flo@gpby}}%
+  \flo@calc\flo@gpu{\flo@gpx-0.12*\flo@gpr}\flo@calc\flo@gpv{\flo@gpy+0.12*\flo@gpr}%
+  \flo@calc\flo@gpe{0.8*\flo@gpax}\flo@calc\flo@gpf{0.8*\flo@gpay}%
+  \flo@calc\flo@gpg{0.8*\flo@gpbx}\flo@calc\flo@gpk{0.8*\flo@gpby}%
+  \flo@vfill{flo@gpbloom}{0.22}{0}{\pgfpathellipse{\flo@P\flo@gpu\flo@gpv}{\flo@P\flo@gpe\flo@gpf}{\flo@P\flo@gpg\flo@gpk}}%
+  \flo@calc\flo@gpu{\flo@gpx-0.38*\flo@gpr}\flo@calc\flo@gpv{\flo@gpy+0.38*\flo@gpr}%
+  \flo@calc\flo@gpe{0.18*\flo@gpr}\flo@calc\flo@gpf{0.14*\flo@gpr}%
+  \flo@vfill{white}{0.75}{0}{\pgfpathellipse{\flo@P\flo@gpu\flo@gpv}{\flo@P\flo@gpe0}{\flo@P0\flo@gpf}}%
+  \colorlet{flo@c}{flo@gpbase!40!black}%
+  \flo@vstroke{flo@c}{0.2}{0.8}{0}{\pgfpathellipse{\flo@P\flo@gpx\flo@gpy}{\flo@P\flo@gpax\flo@gpay}{\flo@P\flo@gpbx\flo@gpby}}}
+% a bunch of grapes as a vine carries one, the stalk #1 sized: a short stalk that hooks over
+% to one side, then the bunch hangs straight down the page (swaying a little), a branched
+% stalk whose side branches shorten toward its tip (conical), stay long (cylindrical), or
+% one long branch near the top carries a wing of its own (winged). A grape at each branch's
+% end, one partway along the longer ones, one on the stalk at each level and one at its tip,
+% each on a pedicel; loose bunches have gaps. The grapes are gathered first (flo@gq...) and
+% painted in three depths, the furthest smallest and darkest (native: grapes)
+\def\flo@grapeunit#1{%
+  \edef\flo@gpL{#1}\edef\flo@gpc{\flo@get{compact}}\edef\flo@gpb{\flo@get{bunch}}%
+  \flo@chance{0.5}\ifflo@yes\def\flo@gpws{1}\else\def\flo@gpws{-1}\fi
+  \flo@sym\flo@t{10}\flo@calc\flo@gphd{90+\flo@t}\flo@range\flo@t{90}{120}\flo@calc\flo@gptn{\flo@gpws*\flo@t}%
+  \flo@calc\flo@gplen{0.3*\flo@gpL}\flo@walk{0}{0}\flo@gphd\flo@gptn\flo@gplen{6}%
+  \edef\flo@gpex{\flo@xx}\edef\flo@gpey{\flo@yy}%
+  \flo@vstem{7}{0.035}{0.024}{0.1}%
+  \begin{pgfscope}\pgftransformshift{\flo@P\flo@gpex\flo@gpey}\flo@upright
+  \flo@sym\flo@t{10}\flo@calc\flo@gpsw{270+\flo@t}%
+  \def\flo@tmp{cylindrical}\ifx\flo@gpb\flo@tmp\flo@calc\flo@gpH{\flo@gpL*0.68}\else\flo@calc\flo@gpH{\flo@gpL*0.62}\fi
+  \flo@calc\flo@gpR{0.058*\flo@gpL}%
+  \flo@calc\flo@gpux{cos(\flo@gpsw)}\flo@calc\flo@gpuy{sin(\flo@gpsw)}%
+  \flo@loop{gpa}\flo@Gc{0}{10}{%
+    \flo@calc\flo@xx{0.1*\the\flo@Gc*\flo@gpH*\flo@gpux}\flo@calc\flo@yy{0.1*\the\flo@Gc*\flo@gpH*\flo@gpuy}%
+    \flo@put{\the\numexpr\flo@Gc+1\relax}{\flo@xx}{\flo@yy}}%
+  \flo@vstem{11}{0.022}{0.01}{0.12}%
+  \def\flo@gpN{0}\edef\flo@gpnb{\the\numexpr5+\flo@gpc\relax}%
+  \flo@loop{gpl}\flo@Gc{1}{\flo@gpnb}{%
+    \flo@calc\flo@gpt{(\the\flo@Gc-0.5)/\flo@gpnb}%
+    \flo@calc\flo@gprx{\flo@gpt*\flo@gpH*\flo@gpux}\flo@calc\flo@gpry{\flo@gpt*\flo@gpH*\flo@gpuy}%
+    \def\flo@tmp{cylindrical}\ifx\flo@gpb\flo@tmp
+      \ifnum\numexpr8*\flo@Gc-4\relax<\numexpr6*\flo@gpnb\relax\def\flo@gpw{0.8}\else
+        \flo@calc\flo@gpw{0.8-1.6*(\flo@gpt-0.75)}\fi
+    \else\flo@calc\flo@gpw{1-0.85*\flo@gpt}\fi
+    \flo@calc\flo@gpW{0.24*\flo@gpL*\flo@gpw}\ifnum\flo@gpc=1 \flo@calc\flo@gpW{\flo@gpW*1.15}\fi
+    \flo@loop{gpk}\flo@Gd{0}{1}{%
+      \ifnum\flo@Gd=0 \def\flo@gps{-1}\else\def\flo@gps{1}\fi
+      \flo@range\flo@t{50}{70}\flo@calc\flo@gpba{\flo@gpsw+\flo@gps*\flo@t}%
+      \flo@range\flo@t{0.75}{1.05}\flo@calc\flo@gpbl{\flo@gpW*\flo@t}%
+      \flo@calc\flo@gpex{\flo@gprx+\flo@gpbl*cos(\flo@gpba)}\flo@calc\flo@gpey{\flo@gpry+\flo@gpbl*sin(\flo@gpba)}%
+      \flo@hair\flo@gprx\flo@gpry\flo@gpex\flo@gpey
+      \flo@gpadd\flo@gpex\flo@gpey\flo@gpba
+      \ifnum\numexpr20*\flo@Gc-10\relax<\numexpr14*\flo@gpnb\relax
+        \flo@calc\flo@gpu{\flo@gprx+0.5*\flo@gpbl*cos(\flo@gpba)}\flo@calc\flo@gpv{\flo@gpry+0.5*\flo@gpbl*sin(\flo@gpba)}%
+        \flo@gpadd\flo@gpu\flo@gpv\flo@gpba\fi}%
+    \flo@gpadd\flo@gprx\flo@gpry\flo@gpsw
+    \def\flo@tmp{winged}\ifx\flo@gpb\flo@tmp\ifnum\flo@Gc=2
+      \flo@range\flo@t{55}{65}\flo@calc\flo@gpwa{\flo@gpsw+\flo@gpws*\flo@t}%
+      \flo@calc\flo@gpex{\flo@gprx+0.42*\flo@gpL*cos(\flo@gpwa)}\flo@calc\flo@gpey{\flo@gpry+0.42*\flo@gpL*sin(\flo@gpwa)}%
+      \flo@hair\flo@gprx\flo@gpry\flo@gpex\flo@gpey
+      \flo@calc\flo@gpu{\flo@gpex-0.9*\flo@gpR}\flo@gpadd\flo@gpu\flo@gpey\flo@gpwa
+      \flo@calc\flo@gpu{\flo@gpex+0.9*\flo@gpR}\flo@gpadd\flo@gpu\flo@gpey\flo@gpwa
+      \flo@calc\flo@gpv{\flo@gpey-1.5*\flo@gpR}\flo@gpadd\flo@gpex\flo@gpv\flo@gpwa
+      \flo@calc\flo@gpv{\flo@gpey+0.4*\flo@gpR}\flo@gpadd\flo@gpex\flo@gpv\flo@gpwa
+    \fi\fi}%
+  \flo@calc\flo@gpu{\flo@gpH*\flo@gpux}\flo@calc\flo@gpv{\flo@gpH*\flo@gpuy}\flo@gpadd\flo@gpu\flo@gpv\flo@gpsw
+  \flo@loop{gpz}\flo@Ge{1}{3}{%
+    \flo@loop{gpd}\flo@Gf{1}{\flo@gpN}{%
+      \ifnum\csname flo@gqz\the\flo@Gf\endcsname=\flo@Ge
+        \flo@calc\flo@gpm{(0.85+0.05*\the\flo@Ge)*\csname flo@gqr\the\flo@Gf\endcsname}%
+        \flo@vgrape{\csname flo@gqx\the\flo@Gf\endcsname}{\csname flo@gqy\the\flo@Gf\endcsname}{\flo@gpm}%
+          {\csname flo@gqa\the\flo@Gf\endcsname}{\csname flo@gqp\the\flo@Gf\endcsname}%
+      \fi}}%
+  \end{pgfscope}}
+% gather one grape near (#1,#2) on a pedicel heading #3, unless the bunch is loose and it fell
+\def\flo@gpadd#1#2#3{%
+  \flo@yestrue\ifnum\flo@gpc=1 \flo@chance{0.25}\ifflo@yes\flo@yesfalse\else\flo@yestrue\fi\fi
+  \ifflo@yes
+    \flo@sym\flo@t{0.2}\flo@calc\flo@gpq{#1+\flo@t*\flo@gpR}%
+    \flo@sym\flo@t{0.2}\flo@calc\flo@gpz{#2+\flo@t*\flo@gpR}%
+    \flo@range\flo@t{0.9}{1.05}\flo@calc\flo@gpm{\flo@gpR*\flo@t}%
+    \flo@int\flo@gpzi{1}{3}\flo@int\flo@gpj{0}{8}%
+    \edef\flo@gpN{\the\numexpr\flo@gpN+1\relax}%
+    \expandafter\edef\csname flo@gqx\flo@gpN\endcsname{\flo@gpq}%
+    \expandafter\edef\csname flo@gqy\flo@gpN\endcsname{\flo@gpz}%
+    \expandafter\edef\csname flo@gqr\flo@gpN\endcsname{\flo@gpm}%
+    \expandafter\edef\csname flo@gqa\flo@gpN\endcsname{#3}%
+    \expandafter\edef\csname flo@gqz\flo@gpN\endcsname{\flo@gpzi}%
+    \expandafter\edef\csname flo@gqp\flo@gpN\endcsname{\the\numexpr100-\ifcase\flo@gpzi\or30\or15\else0\fi-\flo@gpj\relax}%
+  \fi}
 \def\flo@catkinunit#1{%
   \edef\flo@bst{\flo@ust}\edef\flo@clL{#1}\flo@stone
   \flo@sym\flo@t{10}\flo@calc\flo@clh{90+\flo@t}\flo@sym\flo@clb{15}%
@@ -1743,6 +1853,10 @@
   \ifx\flo@kind\flo@Kumbel\def\flo@ul{4}\else\ifx\flo@kind\flo@Kraceme\def\flo@ul{4}\else\def\flo@ul{5}\fi\fi
   \flo@at\flo@ul
   \ifflo@draw\flo@organ{\pgftransformshift{\flo@P\flo@ux\flo@uy}\pgftransformrotate{\flo@ua}\flo@unitdraw\flo@uk}\fi}
+% a grapevine's thyrse is a bunch of grapes once its flowers are past their best
+\def\flo@thyrseorgrapes{\edef\flo@fr{\flo@get{fruit}}\def\flo@tmp{grape}%
+  \ifx\flo@fr\flo@tmp\ifdim\flo@ust pt>1pt \flo@grapeunit\flo@L\else\flo@thyrseunit\flo@L\fi
+  \else\flo@thyrseunit\flo@L\fi}
 \def\flo@unitdraw#1{%
   \flo@fdiam{#1}%
   \def\flo@tmp{solitary}\ifx\flo@if\flo@tmp\flo@bloom\flo@fd\flo@ust\else
@@ -1752,7 +1866,7 @@
   \def\flo@tmp{raceme}\ifx\flo@if\flo@tmp\flo@racemeunit\flo@L{0.3}{40}\else
   \def\flo@tmp{spike}\ifx\flo@if\flo@tmp\flo@spikeunit\flo@L\else
   \def\flo@tmp{panicle}\ifx\flo@if\flo@tmp\flo@panicleunit\flo@L\else
-  \def\flo@tmp{thyrse}\ifx\flo@if\flo@tmp\flo@thyrseunit\flo@L\else
+  \def\flo@tmp{thyrse}\ifx\flo@if\flo@tmp\flo@thyrseorgrapes\else
   \def\flo@tmp{monochasium}\ifx\flo@if\flo@tmp\flo@curlunit\flo@L\else
   \def\flo@tmp{catkin}\ifx\flo@if\flo@tmp\flo@calc\flo@L{0.3*\flo@L}\flo@catkinunit\flo@L\else
   \def\flo@tmp{dichasium}\ifx\flo@if\flo@tmp\flo@calc\flo@L{0.8*\flo@L}\flo@forkunit\flo@L\else

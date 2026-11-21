@@ -12,10 +12,10 @@ page are sampled the same way.
 
 ## A genome
 
-A species is 62 traits, always drawn in the same order. The first is the *body plan*, which
+A species is 67 traits, always drawn in the same order. The first is the *body plan*, which
 fixes the clade (monocot, eudicot or fern) and gives every later trait its distribution. There
-are fourteen flowering plans (lily, iris, rose, mustard, pea, mint, daisy, umbellifer, heath,
-borage, catkin, columbine, and a generic eudicot and monocot) and the fern.
+are fifteen flowering plans (lily, iris, rose, mustard, pea, mint, daisy, umbellifer, heath,
+borage, catkin, columbine, grape, and a generic eudicot and monocot) and the fern.
 
 | part | what the genome decides |
 |---|---|
@@ -24,7 +24,8 @@ borage, catkin, columbine, and a generic eudicot and monocot) and the fern.
 | cluster | alone on its stalk, or a raceme, spike, panicle, thyrse, corymb, simple or compound umbel, forked or coiled cyme, head or catkin; how many flowers, in what order they open, how large they are |
 | leaf | simple, or pinnate, bipinnate, palmate or trifoliate; one of twelve shapes, nine edges, six tips and six bases; pinnate, arcuate, palmate, parallel or forked veins; stalked, stalkless, clasping or sheathing; stipules; alternate, opposite, whorled, in a rosette or in two ranks; curled tips, hairs |
 | stem | upright, sprawling, climbing or woody; its section and taper; tendrils on a climber's leaves |
-| fruit and season | sixteen fruits, from a pea's pod and a rose's hip to a dandelion's clock; an early or a late flowerer |
+| fruit and season | seventeen fruits, from a pea's pod and a rose's hip to a dandelion's clock and a bunch of grapes; an early or a late flowerer |
+| grape | its variety (cabernet, pinot, chardonnay, muscat, sultana or concord), which sets its leaf's lobes and how deep they are cut, and its bunch: black, red or pale grapes, round, oval or long, in a cone-shaped, cylindrical or shouldered bunch, loose or dense |
 | fern | fronds divided once, twice or three times, their outline, pinnae and stalk; the sori beneath, and a fertile frond of another shape |
 
 A body plan bundles its traits, so the rules of botany hold by construction. A lily has its
@@ -41,12 +42,32 @@ The eight of the document seed 7:
 
 - A blue daisy head of nineteen rays alone on its stalk, for bees; lobed, narrow leaves; then small dry seeds.
 - A five-petaled blue rose in forked cymes, for bees; deeply cut, oval leaves; then capsules.
-- A blue wheel of five lobes in a coiled cyme that uncurls, for bees; hairy, smooth-edged, oval leaves; then nutlets.
-- Tiny petal-less flowers in hanging catkins, pollinated by the wind; toothed, spoon-shaped leaves; then winged seeds.
-- A violet lily of six swept-back tepals along a raceme, for butterflies; smooth-edged, narrow leaves with parallel veins; then capsules.
-- A four-petaled nodding white rose in a flat-topped cluster, for flies and hoverflies; leaves of two pairs of toothed leaflets; then stone fruit.
-- A blue pea flower along a raceme, for bees; leaves of five pairs of smooth-edged leaflets, climbing by tendrils; then pods.
-- A white two-lipped flower in a dense spike, for bees; toothed, narrow leaves, in pairs; then nutlets.
+- A violet cross of four petals along a raceme, for butterflies; lobed, oval leaves; then round flat pods.
+- A pinot grapevine: tiny green flowers in a crowded thyrse, for bees; hand-lobed, heart-shaped leaves veined from the base, climbing by tendrils; then dense, cylindrical bunches of round, black grapes.
+- A six-petaled violet wheel in a dense spike, for butterflies; smooth-edged, strap-shaped leaves with parallel veins; then capsules.
+- A blue wheel of five lobes in a coiled cyme that uncurls, for bees; hairy, smooth-edged, narrow leaves; then nutlets.
+- A red flower with five spurs along a raceme, for birds; leaves in threes of lobed leaflets, in a rosette at the foot; then pods that split down one side.
+- A five-petaled yellow wheel in a compound umbel, for flies and hoverflies; leaves of three pairs of coarsely toothed leaflets; then paired ribbed seeds.
+
+## Grapevines
+
+A grapevine climbs by tendrils, its leaves heart-shaped and cut into three or five lobes, and
+its tiny green flowers crowd a thyrse. Once they fruit, the thyrse becomes a bunch: its stalk
+rises and arches over, and the bunch hangs back from its top in rows of grapes, each with the
+pale bloom on its skin and a highlight. The leaves turn copper in autumn. Its variety decides
+how it looks:
+
+| variety | leaf | bunch |
+|---|---|---|
+| pinot | three to five shallow lobes | dense, cylindrical; small blue-black grapes under a dusty bloom, round or oval |
+| saperavi | three lobes, large | loose to fairly dense, cone-shaped; black grapes, round or oval |
+| gewurztraminer | small, nearly whole | small, dense, cone-shaped; small oval grapes, each a shade from gold to copper-pink |
+| rkatsiteli | five lobes | fairly dense, cone-shaped, sometimes shouldered; large yellow-green grapes flecked with rust, round or oval |
+| regent | three lobes, cut medium-deep | dense, cylindrical or cone-shaped; large round blue-black grapes |
+| johanniter | five lobes | dense, cylindrical; golden grapes flecked with rust |
+
+A variety can be fixed like any trait (`traits={variety=pinot}`), and the rest of the grape
+follows it.
 
 ## A genome of your own
 

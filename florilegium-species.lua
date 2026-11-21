@@ -146,13 +146,14 @@ end
 
 -- the order of the draws; every species draws them in this order
 M.TRAITS = {
-  "plan", "clade", "syndrome", "color", "form", "symmetry", "fused", "merosity", "merovar",
+  "plan", "clade", "variety", "syndrome", "color", "form", "symmetry", "fused", "merosity", "merovar",
   "petalshape", "petalaspect", "apex", "petalmargin", "petalamp", "claw", "reflex", "overlap", "cup",
   "guides", "guidecount", "picotee", "corona", "spurs", "stamens", "orient",
   "inflo", "count", "rays", "depth", "openorder", "siderule", "coil", "size",
   "compound", "leaflets", "leafshape", "leafaspect", "leafmargin", "teeth", "dissection",
   "leafapex", "leafbase", "venation", "attachment", "stipules", "arrangement",
   "curl", "twist", "taper", "turns", "habit", "section", "hairy", "tendrils", "fruit", "phenology",
+  "berrytone", "berryshape", "bunch", "compact",
   -- a fern's own, last, so that the flowering plans (constants here: no draws) are as they were
   "division", "pinnae", "outline", "stipe", "sori", "dimorphic",
 }
@@ -240,6 +241,7 @@ local COMMON = {
   hairy = W(0, 3, 1, 1),
   tendrils = C(0),
   phenology = R(-0.15, 0.15),
+  variety = C("none"), berrytone = C("none"), berryshape = C("none"), bunch = C("none"), compact = C(0),
   division = C(0), pinnae = C(0), outline = C("none"), stipe = C(0), sori = C("none"), dimorphic = C(0),
 }
 
@@ -466,6 +468,39 @@ M.PLANS = {
     venation = W("parallel", 9, "arcuate", 1),
     fruit = W("capsule", 4, "berry", 1),
   } },
+  -- a grapevine: tiny green flowers in a thyrse, hand-lobed heart-shaped leaves, tendrils, and
+  -- in autumn hanging bunches of grapes; its variety sets the leaf's lobes and the bunch
+  { name = "grape", clade = "eudicot", w = 8, roles = { spray = 1 }, d = {
+    variety = W("pinot", 3, "saperavi", 2, "gewurztraminer", 2, "rkatsiteli", 2, "regent", 1, "johanniter", 1),
+    syndrome = W("bee", 1, "fly", 1),
+    color = C("green"), form = C("rotate"), fused = C(0), merosity = C(5),
+    guides = C("none"), stamens = C("exserted"),
+    inflo = C("thyrse"),
+    size = R(2, 4),
+    compound = C("simple"),
+    leafshape = C("cordate"),
+    leafmargin = C("palmatelobed"),
+    -- the varieties' leaves: pinot's slightly lobed, three to five; saperavi's three-lobed;
+    -- gewurztraminer's nearly whole; regent's three-lobed, rarely five, its upper sinuses
+    -- medium-deep; johanniter's and rkatsiteli's five-lobed
+    teeth = BY("variety", { pinot = W(3, 1, 5, 1), saperavi = C(3), gewurztraminer = W(3, 3, 5, 1), regent = W(3, 4, 5, 1),
+      _ = C(5) }),
+    dissection = BY("variety", { pinot = R(0.15, 0.3), saperavi = R(0.25, 0.4), gewurztraminer = R(0.08, 0.2),
+      rkatsiteli = R(0.35, 0.55), regent = R(0.4, 0.55), johanniter = R(0.35, 0.5) }),
+    attachment = C("petiolate"),
+    arrangement = C("alternate"),
+    habit = C("climbing"),
+    turns = C(1),
+    fruit = C("grape"),
+    -- the bunches: pinot's, gewurztraminer's and johanniter's cylindrical and dense;
+    -- regent's cylindrical and dense too; saperavi's and rkatsiteli's conical
+    berrytone = BY("variety", { gewurztraminer = C("red"), rkatsiteli = C("pale"), johanniter = C("pale"), _ = C("dark") }),
+    berryshape = BY("variety", { pinot = W("round", 2, "oval", 1), saperavi = W("oval", 1, "round", 1),
+      gewurztraminer = C("oval"), rkatsiteli = W("oval", 1, "round", 1), regent = W("round", 2, "oval", 1), _ = C("round") }),
+    bunch = BY("variety", { saperavi = C("conical"), rkatsiteli = W("conical", 2, "winged", 1), gewurztraminer = C("conical"),
+      regent = W("cylindrical", 2, "conical", 1), _ = C("cylindrical") }),
+    compact = BY("variety", { saperavi = C(2), rkatsiteli = C(2), _ = C(3) }),
+  } },
   -- a fern (report section 4d): fronds divided once to three times (pinnae, pinnules, their
   -- lobes), in an outline, on a bare stipe; spores in sori under the pinnae; in a dimorphic
   -- fern the fertile fronds are narrow and beaded. Only the role "fern" draws it (apart):
@@ -523,6 +558,8 @@ function M.violations(sp)
   check(sp.merovar == 0 or sp.symmetry == "radial", "variable petal number in a two-sided flower")
   check(sp.spurs ~= "one" or sp.symmetry == "bilateral", "one spur on a radial flower")
   check(sp.tendrils == 0 or sp.compound == "pinnate", "tendrils without a pinnate leaf")
+  check((sp.plan == "grape") == (sp.variety ~= "none"), "a variety on a plant that is not a grape, or a grape without")
+  check((sp.fruit == "grape") == (sp.compact > 0), "a bunch without grapes, or grapes without a bunch")
   local fern = sp.clade == "fern"
   check(fern == (sp.division > 0), "a flowering plant with fronds, or a fern without")
   check(fern or (sp.pinnae == 0 and sp.sori == "none" and sp.dimorphic == 0), "a frond's traits on a flowering plant")
@@ -557,7 +594,7 @@ local ARRANGE = { alternate = "", opposite = ", in pairs", whorled = ", in whorl
 local FRUIT = { capsule = "capsules", berry = "berries", hip = "hips", pome = "small apples", drupe = "stone fruit",
   legume = "pods", silique = "long thin pods", silicle = "round flat pods", nutlets = "nutlets",
   pappus = "seeds with parachutes", achene = "small dry seeds", schizocarp = "paired ribbed seeds",
-  follicle = "pods that split down one side", samara = "winged seeds", nut = "nuts" }
+  follicle = "pods that split down one side", samara = "winged seeds", nut = "nuts", grape = "bunches of grapes" }
 
 local function n_(k) return NUM[k] or fmt("%d", k) end
 local function a_(word) return (word:match("^[aeiou]") and "an " or "a ") .. word end
@@ -619,9 +656,22 @@ local function fern_words(sp)
   return s .. (sp.turns == 1 and ", the fronds turning copper in autumn." or ".")
 end
 
+-- a grapevine in words: its variety, then its flowers, leaves and bunches
+local DENSE = { "loose", "fairly dense", "dense" }
+local BUNCH = { conical = "cone-shaped", cylindrical = "cylindrical", winged = "shouldered" }
+local BERRY = { round = "round", oval = "oval", long = "long" }
+local TONE = { dark = "black", red = "red", pale = "pale green" }
+local OWN = { gewurztraminer = "pink", rkatsiteli = "golden green", johanniter = "golden" }
+local function grape_words(sp)
+  return a_(sp.variety) .. " grapevine: tiny green flowers " .. INFLO[sp.inflo] .. ", " .. FOR[sp.syndrome] .. "; "
+    .. leaf_words(sp) .. ", climbing by tendrils; then " .. DENSE[sp.compact] .. ", " .. BUNCH[sp.bunch]
+    .. " bunches of " .. BERRY[sp.berryshape] .. ", " .. (OWN[sp.variety] or TONE[sp.berrytone]) .. " grapes."
+end
+
 -- one sentence: what it looks like, how it flowers, who it is for, its leaves, its fruit
 function M.describe(sp)
   if sp.clade == "fern" then local s = fern_words(sp) return s:sub(1, 1):upper() .. s:sub(2) end
+  if sp.plan == "grape" then local s = grape_words(sp) return s:sub(1, 1):upper() .. s:sub(2) end
   local s = flower_words(sp) .. " " .. INFLO[sp.inflo] .. ", " .. FOR[sp.syndrome] .. "; "
     .. leaf_words(sp) .. (sp.tendrils == 1 and ", climbing by tendrils" or "") .. "; then " .. FRUIT[sp.fruit] .. "."
   return s:sub(1, 1):upper() .. s:sub(2)
@@ -631,9 +681,12 @@ PLANT.describe = M.describe
 -- ---------------------------------------------------------------- a document's plants
 -- showy: flowers that can carry a page, one at a time or in a loose cluster, not a
 -- raceme, spike, catkin or compound umbel of small ones (those make a page's sprays),
--- and painted in the ink: red and orange take the copper, which the margin keeps sparing
+-- and painted in the ink: red and orange take the copper, which the margin keeps sparing.
+-- A grapevine's bunches carry a stem, though its flowers are a thyrse's
 local SPRAYS = { cumbel = true, raceme = true, spike = true, panicle = true, thyrse = true, catkin = true, monochasium = true }
-function M.showy(sp) return not SPRAYS[sp.inflo] and sp.color ~= "red" and sp.color ~= "orange" end
+function M.showy(sp)
+  return sp.plan == "grape" or (not SPRAYS[sp.inflo] and sp.color ~= "red" and sp.color ~= "orange")
+end
 
 -- a pool of eight species for a document (docseed: \florilegiumseed, or 0), each with a
 -- role, no body plan twice, both heroes showy; ink.rng streams, Lua only (TikZ draws
@@ -671,6 +724,26 @@ function M.fern(docseed)
     ferns[docseed] = M.sample(1 + floor(rng.u() * 2147483645), "fern")
   end
   return ferns[docseed]
+end
+
+-- the document's grapevine of one variety, for a margin that grows nothing else (option
+-- vine=<variety>; docseed as for the pool): from a stream of its own
+local vines = {}
+function M.vine(docseed, variety)
+  docseed = docseed or 0
+  local key = docseed .. "/" .. tostring(variety)
+  if not vines[key] then
+    local w, known = PLAN.grape.d.variety, {}
+    for i = 2, #w, 2 do known[#known + 1] = w[i] end
+    local ok = false
+    for _, v in ipairs(known) do if v == variety then ok = true end end
+    if not ok then
+      error("florilegium: vine=" .. tostring(variety) .. "? a grape's variety is one of " .. concat(known, ", "), 0)
+    end
+    local rng = ink.rng(docseed * 104729 + 809)
+    vines[key] = M.sample(1 + floor(rng.u() * 2147483645), "grape", nil, { variety = variety })
+  end
+  return vines[key]
 end
 
 -- the four that grow on one page (rng: the page's species stream), in the order of
