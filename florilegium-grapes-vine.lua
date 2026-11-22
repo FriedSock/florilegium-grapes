@@ -507,7 +507,29 @@ local function bunch(r, sp, L, c, bl, lx, ripe, rb, want, v)
   end
   table.sort(B, function(a, b) return a[3] < b[3] end)
   local asp = ({ round = 1, oval = 1.16, long = 1.42 })[sp.berryshape]
+  -- occlusion: a grape lies under the grapes painted after it, each taken as a circle a
+  -- little smaller than it is. Points around and inside a circle a little larger than the
+  -- grape are tested, and one wholly under them is not drawn at all. Each grape draws from a
+  -- stream of its own, so those drawn look as they would with nothing left out
+  for i, p in ipairs(B) do
+    p.gr = r.fork()
+    local R, hit, n = p[4] * asp * 1.05, 0, 0
+    local function test(x, y)
+      n = n + 1
+      for j = i + 1, #B do
+        local q = B[j]
+        local rq = 0.9 * q[4]
+        if (x - q[1]) ^ 2 + (y - q[2]) ^ 2 < rq * rq then hit = hit + 1 return end
+      end
+    end
+    test(p[1], p[2])
+    for s = 1, 24 do test(p[1] + R * cos(s * pi / 12), p[2] + R * sin(s * pi / 12)) end
+    for s = 1, 8 do test(p[1] + 0.55 * R * cos(s * pi / 4), p[2] + 0.55 * R * sin(s * pi / 4)) end
+    p.cover = hit / n
+  end
   for _, p in ipairs(B) do
+    if p.cover >= 1 then goto hidden end
+    local gr = p.gr
     local d = (p[3] - zmin) / max(1e-6, zmax - zmin)
     local rr = p[4]
     local own = p.shot and 0 or clamp((ripe - 0.6 * p.turn) / 0.4 + (ripe >= 1 and 1 or 0), 0, 1)
@@ -541,18 +563,14 @@ local function bunch(r, sp, L, c, bl, lx, ripe, rb, want, v)
     if wax > 0.06 then
       -- the bloom is a powder, not a film: clipped to the grape, three irregular drifts of it
       -- overlapping, thicker where they cross; on a rubbed grape they lie off to one side,
-      -- leaving the skin bare along the other. On the nearest grapes a grain of paler specks
+      -- leaving the skin bare along the other
       oval(p[1], p[2], 1) ink.clip()
       local ra = p.rubat * RAD
       local ox_, oy_ = rubbed and -0.3 * rr * cos(ra) or 0, rubbed and -0.3 * rr * sin(ra) or 0
       for _ = 1, 3 do
-        ink.smooth(ink.blob(r, p[1] + ox_ + r.sym(0.35) * rr, p[2] + oy_ + r.sym(0.35) * rr,
-          rr * r.range(0.6, 1.0), long * r.range(0.6, 1.0), 0.35, 9), true)
+        ink.smooth(ink.blob(gr, p[1] + ox_ + gr.sym(0.35) * rr, p[2] + oy_ + gr.sym(0.35) * rr,
+          rr * gr.range(0.6, 1.0), long * gr.range(0.6, 1.0), 0.35, 9), true)
         ink.fill(bc, 0.5 * wax)
-      end
-      if d > 0.55 then
-        for _ = 1, 16 do ink.circle(p[1] + ox_ + r.sym(0.8) * rr, p[2] + oy_ + r.sym(0.8) * long, rr * r.range(0.02, 0.04)) end
-        ink.fill(mix(bc, ink.white, 0.35), min(0.6, 1.3 * wax))
       end
       ink.unclip()
       -- palest at the rim, fading inward
@@ -580,6 +598,7 @@ local function bunch(r, sp, L, c, bl, lx, ripe, rb, want, v)
       ink.fill({ 0.55, 0.32, 0.18 }, 0.7)
     end
     oval(p[1], p[2], 1) ink.stroke(scale(col, dark and 0.7 or 0.42), 0.18, dark and 0.4 or 0.8)
+    ::hidden::
   end
   return #B
 end

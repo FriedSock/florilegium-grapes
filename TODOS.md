@@ -2,7 +2,7 @@
 
 A temporary list of outstanding work. Remove an item when it is done, and the file when it is empty.
 
-- Trim the data each bunch of grapes takes up (`florilegium-grapes-vine.lua`). With the powdery bloom (three clipped drifts, a grain of specks and a soft rim on each grape) the bunches were about 59% of a vine page's path operators (about 1.77 MB of 3 MB a page before compression, measured 2026-11-21 with an older style of bunch; measure again). Draw the powder only on grapes that can be seen (the front of the bunch, `d` high), and a single fill on those behind. Skip grapes that the grapes in front hide completely. Gather the outlines into one path per bunch and depth.
+- Trim the data a vine page takes up (`florilegium-grapes-vine.lua`; `texlua tools/bytes.lua` measures it, a part at a time). Measured 2026-11-22, averaged over three showcase pages: 3.08 MB of path operators a page before compression, leaves 1.33 MB (43%, of which their hairs 0.49 MB), bunches 1.18 MB (38%, of which the bloom powder 0.66 MB). Done: lossless occlusion culling of grapes (one wholly under the grapes painted after it is not drawn); and the bloom's pale specks were dropped, as they looked wrong. Together they took the bunches from 1.78 MB to 1.18 MB. Still to try: fewer hairs on small or far-back leaves (the hairs cannot be seen below a size on the page); gathering each grape's and each leaf's separate strokes into fewer paths; culling leaves hidden behind others (rarer, and it needs a coverage map of the page).
 
 ## Leaves (`florilegium-grapes-vine.lua`)
 

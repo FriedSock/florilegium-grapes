@@ -126,7 +126,11 @@ and `florilegium-grapes-vine.lua` beside your document (or upload them to an
 
 ```sh
 lualatex showcase.tex       # a page for each variety at harvest, then pinot noir through the year
+texlua tools/bytes.lua      # how much a page's drawing takes, and each part's share
 ```
+
+A page's drawing is written straight into the PDF, so its size is the cost to watch. The grapes
+painted behind others are left out when nothing of them would show (see the bunches).
 
 ## Origin
 
