@@ -356,7 +356,7 @@ end
 -- Painted from the back: stalks, then grapes, nearer ones lighter.
 -- From the origin down -y, L long; rb the grape's half width, want how many grapes
 -- mm: cm on the page for a real mm (the stalks are drawn as thick as real ones)
-local function panicle(r, sp, L, B, ox, oy, oz, tilt, rb, want, mm)
+local function panicle(r, sp, L, B, branches, ox, oy, oz, tilt, rb, want, mm)
   local H = 0.78 * L
   local bx, bz = r.sym(0.15), r.sym(0.15)
   local ct, st = cos(tilt * RAD), sin(tilt * RAD)
@@ -396,7 +396,7 @@ local function panicle(r, sp, L, B, ox, oy, oz, tilt, rb, want, mm)
     local hl = sqrt(hx_ * hx_ + hy_ * hy_ + (0.45 * s_) ^ 2)
     B[#B + 1] = { gx, gy, gz, rb * size, ax, ay, az, shot = size < 0.7, turn = r.u(), tint = r.u(), thick = r.u(), rub = r.u(),
       rubat = r.range(0, 360), hx = hx_ / hl, hy = hy_ / hl,
-      ped = stalks[#stalks] }
+      from = { gx, gy, gz } }
   end
   -- a spiral of branches off the rachis, the longest at the shoulders, each ending in a
   -- small cluster of grapes on short pedicels: a sphere of them about the branch's tip
@@ -430,6 +430,8 @@ local function panicle(r, sp, L, B, ox, oy, oz, tilt, rb, want, mm)
     local tx, ty, tz = x0 + c * R, y0 - drop, z0 + s_ * R
     stalk(x0, y0, z0, mx, my, mz, 2.0)
     stalk(mx, my, mz, tx, ty, tz, 1.5)
+    local branch = { tip = stalks[#stalks], grapes = {} }
+    branches[#branches + 1] = branch
     -- its cluster about the tip, a little below it, each grape on its pedicel
     local cx, cy, cz = tx, ty - 0.45 * rs, tz
     for k = 1, m do
@@ -439,11 +441,10 @@ local function panicle(r, sp, L, B, ox, oy, oz, tilt, rb, want, mm)
       local ux, uy, uz = rr2 * cos(a * RAD), zz, rr2 * sin(a * RAD)
       local gx, gy, gz = cx + ux * rs * 0.9, cy + uy * rs * 1.2, cz + uz * rs * 0.9
       local px, py, pz = lerp(tx, gx, 0.45), lerp(ty, gy, 0.45) + 0.1 * rb, lerp(tz, gz, 0.45)
-      stalk(tx, ty, tz, px, py, pz, 1.1)                -- the pedicel, about 1 mm thick
-      stalk(px, py, pz, gx, gy, gz, 0.9)
       grape(gx, gy, gz, px, py, pz, c, s_, r.chance(0.04) and r.range(0.45, 0.6) or r.range(0.88, 1.08))
       -- it hangs from its pedicel: its long axis that way, and down
       local g = B[#B]
+      branch.grapes[#branch.grapes + 1] = g
       local hx_, hy_, hz_ = gx - tx, gy - ty - 0.6 * rs, gz - tz
       local hl = sqrt(hx_ * hx_ + hy_ * hy_ + hz_ * hz_)
       if hl > 1e-9 then g.hx, g.hy = hx_ / hl, hy_ / hl end
@@ -461,7 +462,6 @@ local function panicle(r, sp, L, B, ox, oy, oz, tilt, rb, want, mm)
       if d > 1e-6 then
         local k = lerp(d, max(0, R0 * shape(tg) - 0.3 * rb), fill) / d
         g[1], g[3] = ax + dx * k, az + dz * k
-        g.ped[4], g.ped[6] = g[1], g[3]
       end
     end
   end
@@ -481,12 +481,13 @@ local function bunch(r, sp, L, c, bl, lx, ripe, rb, want, v)
   local stalks = {}
   local function add(list) for _, s_ in ipairs(list) do stalks[#stalks + 1] = s_ end end
   local tilt = r.sym(10)
-  local main = panicle(r, sp, L, B, 0, -ped, 0, tilt, rb, want, mm)
+  local branches = {}
+  local main = panicle(r, sp, L, B, branches, 0, -ped, 0, tilt, rb, want, mm)
   add(main)
   local arm = r.chance(0.5) and 1 or -1
   local wx, wy = arm * 0.22 * L, -ped * 0.55
   if sp.bunch == "winged" then
-    add((panicle(r, sp, 0.45 * L, B, wx, wy - 0.05 * L, r.sym(0.1) * L, arm * r.range(15, 30), rb, floor(0.3 * want),
+    add((panicle(r, sp, 0.45 * L, B, branches, wx, wy - 0.05 * L, r.sym(0.1) * L, arm * r.range(15, 30), rb, floor(0.3 * want),
       mm)))
   end
   -- push apart grapes that collide, as they press in a tight bunch
@@ -506,16 +507,30 @@ local function bunch(r, sp, L, c, bl, lx, ripe, rb, want, v)
       end
     end
   end
+  local BP = mm * 28.3465                        -- bp on the page for a real mm
+  for _, branch in ipairs(branches) do
+    local tip, n = branch.tip, #branch.grapes
+    for _, g in ipairs(branch.grapes) do
+      tip[4] = tip[4] + (g[1] - g.from[1]) / n
+      tip[5] = tip[5] + (g[2] - g.from[2]) / n
+      tip[6] = tip[6] + (g[3] - g.from[3]) / n
+    end
+    local tx, ty, tz = tip[4], tip[5], tip[6]
+    for _, g in ipairs(branch.grapes) do
+      local px, py, pz = lerp(tx, g[1], 0.45), lerp(ty, g[2], 0.45) + 0.1 * rb, lerp(tz, g[3], 0.45)
+      stalks[#stalks + 1] = { tx, ty, tz, px, py, pz, 1.1 * BP }
+      stalks[#stalks + 1] = { px, py, pz, g[1], g[2], g[3], 0.9 * BP }
+    end
+  end
   -- the stalks: the peduncle from the node, the wing's arm, then the bunch's own
   local sc = mix(C.shoot, C.cane, 0.45)
-  local BP = mm * 28.3465                        -- bp on the page for a real mm
   ink.moveto(0, 0) ink.curveto(r.sym(0.03) * L, -0.3 * ped, 0, -0.65 * ped, 0, -ped) ink.stroke(sc, 5.5 * BP, 1)
   if sp.bunch == "winged" then
     ink.moveto(0, -0.55 * ped) ink.lineto(wx, wy - 0.05 * L) ink.stroke(sc, 3 * BP, 1)
   end
   table.sort(stalks, function(a, b) return a[3] + a[6] < b[3] + b[6] end)
   for _, s_ in ipairs(stalks) do
-    if not s_.gone then ink.moveto(s_[1], s_[2]) ink.lineto(s_[4], s_[5]) ink.stroke(sc, s_[7], 0.95) end
+    ink.moveto(s_[1], s_[2]) ink.lineto(s_[4], s_[5]) ink.stroke(sc, s_[7], 0.95)
   end
   -- the grapes, the furthest first. Each is its skin, darker the further back and the lower
   -- in the bunch's shade it hangs; then its bloom, the powdery wax over it, thicker on some
