@@ -26,7 +26,7 @@ shoot positioned trellis, seen from the side of the row, with the margin as its 
 - **The trunk** rises from the foot of the page to the fruiting wire, a third of the way up, and
   divides into the **cordon**, two barked, knotted arms laid along the wire.
 - **Spurs** sit along the cordon, each a stub of last year's cane cut back to two buds, its
-  pruning cut showing, an old dead stub beside some of them. Each leans its own way, and the two
+  pruning cut showing. Each leans its own way, and the two
   shoots from its buds splay apart.
 - **Shoots** grow from the buds, trained straight up between the catch wires, thick at the base,
   their nodes swollen, and hedged level at the top, where some flop over.

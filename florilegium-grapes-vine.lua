@@ -849,7 +849,7 @@ end
 --   - the trunk rises from the ground to the fruiting wire, a third of the way up, and
 --     divides into the cordon, two permanent arms laid along the wire, barked and knobbed;
 --   - along the cordon, every hand's breadth, a spur: a stub of last year's cane cut back to
---     two buds, its cut end showing, older dead stubs beside it;
+--     two buds, its cut end showing;
 --   - from each bud a shoot (a cane once it ripens to brown in autumn), trained straight up
 --     between the catch wires, thick at its base, its nodes swollen; hedged flat at the top,
 --     where some lean over;
@@ -1053,8 +1053,7 @@ function M.page(g)
         local sa = 90 + layout.sym(35)
         local sl = layout.range(0.5, 0.8) * size
         local ex, ey = q[1] + sl * cos(sa * RAD), q[2] + sl * sin(sa * RAD)
-        local stub = layout.chance(0.5) and layout.sym(1) or nil
-        items[#items + 1] = { kind = "spur", q = q, e = { ex, ey }, a = sa, stub = stub, z = 0 }
+        items[#items + 1] = { kind = "spur", q = q, e = { ex, ey }, a = sa, z = 0 }
         -- the spur's two buds: a shoot from each (now and then one is blind)
         for b = 1, 2 do
           if b == 1 or layout.chance(0.85) then
@@ -1214,10 +1213,6 @@ function M.page(g)
         ink.curveto(cx - rr * sa - 0.3 * rr * ca, cy + rr * ca - 0.3 * rr * sa, cx + rr * sa - 0.3 * rr * ca,
           cy - rr * ca - 0.3 * rr * sa, cx + rr * sa, cy - rr * ca)
         ink.close() ink.fill({ 0.78, 0.68, 0.5 }) ink.stroke(C.barkdark, 0.25, 0.8)
-        if it.stub then                                   -- last year's dead stub beside it
-          local sx, sy = q[1] + it.stub * 0.35 * size, q[2] + 0.1
-          band({ { sx, sy }, { sx + it.stub * 0.08 * size, sy + 0.35 * size } }, 0.18 * size, 0.14 * size, { 0.5, 0.46, 0.42 })
-        end
       end)
     elseif k == "shoot" then
       place(layer(it.z) == MID and MID or layer(it.z), 0, 0, 0, function()
