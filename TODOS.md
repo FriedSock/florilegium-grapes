@@ -2,9 +2,9 @@
 
 A temporary list of outstanding work. Remove an item when it is done, and the file when it is empty.
 
-- Trim the data each bunch of grapes takes up (`florilegium-vine.lua`). With the powdery bloom (three clipped drifts, a grain of specks and a soft rim on each grape) the bunches were about 59% of a vine page's path operators (about 1.77 MB of 3 MB a page before compression, measured 2026-11-21 with an older style of bunch; measure again). Draw the powder only on grapes that can be seen (the front of the bunch, `d` high), and a single fill on those behind. Skip grapes that the grapes in front hide completely. Gather the outlines into one path per bunch and depth.
+- Trim the data each bunch of grapes takes up (`florilegium-grapes-vine.lua`). With the powdery bloom (three clipped drifts, a grain of specks and a soft rim on each grape) the bunches were about 59% of a vine page's path operators (about 1.77 MB of 3 MB a page before compression, measured 2026-11-21 with an older style of bunch; measure again). Draw the powder only on grapes that can be seen (the front of the bunch, `d` high), and a single fill on those behind. Skip grapes that the grapes in front hide completely. Gather the outlines into one path per bunch and depth.
 
-## Leaves (`florilegium-vine.lua`)
+## Leaves (`florilegium-grapes-vine.lua`)
 
 - Side shoots: laterals growing from the leaf axils, with their own small leaves and tendrils, are missing. (The code grows a short lateral at about one node in six above the fruit zone, but they are too small and few to be seen.)
 - The ends of the canes are always drawn trimmed (hedged). That is right at veraison and harvest but not in spring or early summer, when the shoots are still growing and end in their soft, unfolding tips.

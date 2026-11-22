@@ -1,9 +1,9 @@
--- florilegium.lua -- the glue between florilegium.sty and the vine: the page's layout, its
+-- florilegium-grapes.lua -- the glue between florilegium-grapes.sty and the vine: the page's layout, its
 -- seed and season, and the vine drawn into its margin as the page ships out.
 -- Copyright (c) 2026 Kevin Raymond, 2026 Jack Bracewell. MIT License: see LICENSE or
--- florilegium.sty.
+-- florilegium-grapes.sty.
 
-local vine = require("florilegium-vine")
+local vine = require("florilegium-grapes-vine")
 local M = {}
 
 local SP_CM = 2.54 / (72.27 * 65536)          -- cm per scaled point
@@ -30,25 +30,25 @@ function M.geometry()
   return g
 end
 
--- a number the user wrote (\florilegiumseed, \florilegiumage): its value, or, when it is not
+-- a number the user wrote (\florilegiumgrapesseed, \florilegiumgrapesage): its value, or, when it is not
 -- a number, the default, with a warning in the log
 function M.number(key, text, default)
   local v = tonumber(text)
   if v and v - v == 0 then return v end         -- a finite number (inf - inf and nan - nan are nan)
   if luatexbase and luatexbase.module_warning then
-    luatexbase.module_warning("florilegium", string.format("%s{%s} is not a number; ignored", key, text))
+    luatexbase.module_warning("florilegium-grapes", string.format("%s{%s} is not a number; ignored", key, text))
   end
   return default
 end
 
 -- the page's seed: from the page number, and the document's seed if it has one
-M.docseed = 0                                 -- \florilegiumseed, or 0
+M.docseed = 0                                 -- \florilegiumgrapesseed, or 0
 function M.seed(page, fixed)
   M.docseed = fixed and math.floor(fixed) or 0
   return fixed and (M.docseed * 7919 + page * 131) or (page * 97 + 1030)
 end
 
--- the season: 0 spring, 0.5 summer, 1 autumn; nil is late summer. \florilegiumage sets it;
+-- the season: 0 spring, 0.5 summer, 1 autumn; nil is late summer. \florilegiumgrapesage sets it;
 -- the option aging spreads it over the document, from the page count of the last run
 M.age = nil
 function M.auto_age(page, last) M.age = last > 1 and math.min(1, (page - 1) / (last - 1)) or 0.5 end
@@ -66,7 +66,7 @@ function M.page(seed)
   end)
   if not ok then
     err = tostring(err)
-    tex.error(err:find("^florilegium") and err or "florilegium: " .. err)
+    tex.error(err:find("^florilegium%-grapes") and err or "florilegium-grapes: " .. err)
   end
 end
 

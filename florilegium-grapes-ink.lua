@@ -1,5 +1,5 @@
--- florilegium-ink.lua -- the drawing core: geometry in Lua, raw PDF out.
--- Copyright (c) 2026 Kevin Raymond. MIT License: see LICENSE or florilegium.sty.
+-- florilegium-grapes-ink.lua -- the drawing core: geometry in Lua, raw PDF out.
+-- Copyright (c) 2026 Kevin Raymond. MIT License: see LICENSE or florilegium-grapes.sty.
 --
 -- Everything is computed here and written as PDF path operators into a literal node, so
 -- TeX does no arithmetic at all. A drawing is made in a local frame (centimeters) under an
@@ -72,7 +72,7 @@ local gs_known = {}
 local function gs(op, mult)
   op = floor(op * 100 + 0.5)
   if op >= 100 and not mult then return nil end
-  local name = fmt("flo%s%d", mult and "m" or "a", op)
+  local name = fmt("flogr%s%d", mult and "m" or "a", op)
   if not gs_known[name] then
     gs_known[name] = true
     tex.sprint(luatexbase.registernumber("catcodetable@atletter"),
@@ -88,7 +88,7 @@ local HUGE = math.huge
 local function P(x, y)
   local px, py = T[1] * x + T[3] * y + T[5], T[2] * x + T[4] * y + T[6]
   if px ~= px or py ~= py or px == HUGE or px == -HUGE or py == HUGE or py == -HUGE then
-    error(fmt("florilegium: a drawing produced a coordinate that is not a number (%s, %s)", px, py), 0)
+    error(fmt("florilegium-grapes: a drawing produced a coordinate that is not a number (%s, %s)", px, py), 0)
   end
   return fmt("%.1f %.1f", px, py)
 end

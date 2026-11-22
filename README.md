@@ -80,7 +80,7 @@ down, johanniter's are nearly smooth.
 the grapes colouring one by one at veraison, and ripe bunches among red leaves on brown canes
 in autumn.*
 
-`\florilegiumage{a}` sets the season of the following pages: 0 spring, 0.5 summer, 1 autumn. The
+`\florilegiumgrapesage{a}` sets the season of the following pages: 0 spring, 0.5 summer, 1 autumn. The
 shoots grow through spring, the grapes turn at veraison, the shoots ripen to brown canes, and in
 autumn the leaves of a black grape turn red and those of a white grape yellow. The option `aging`
 spreads the year over the document, spring on the first page and autumn on the last.
@@ -101,26 +101,26 @@ colours and shapes were checked against photographs of bunches on the vine.
 
 ## Quick start
 
-With LuaLaTeX, put `florilegium.sty`, `florilegium.lua`, `florilegium-ink.lua` and
-`florilegium-vine.lua` beside your document (or upload them to an
+With LuaLaTeX, put `florilegium-grapes.sty`, `florilegium-grapes.lua`, `florilegium-grapes-ink.lua`
+and `florilegium-grapes-vine.lua` beside your document (or upload them to an
 [Overleaf](https://www.overleaf.com) project set to LuaLaTeX):
 
 ```latex
 \usepackage[a4paper,left=68mm,right=22mm]{geometry}   % a wide margin for the vine
-\usepackage[vine=pinot]{florilegium}                  % or saperavi, gewurztraminer,
+\usepackage[vine=pinot]{florilegium-grapes}           % or saperavi, gewurztraminer,
                                                       % rkatsiteli, regent, johanniter
 ...
-\florilegiumage{0.8}                                  % optional: late summer
-\florilegiumvine{saperavi}                            % optional: another variety from here on
+\florilegiumgrapesage{0.8}                            % optional: late summer
+\florilegiumgrapesvine{saperavi}                      % optional: another variety from here on
 ```
 
 | option or command | what it does |
 |---|---|
 | `vine=<variety>` | the variety, for the whole document (default `pinot`) |
 | `aging` | the vine ages from spring on the first page to autumn on the last (two runs) |
-| `\florilegiumvine{variety}` | the variety from the page this is set on |
-| `\florilegiumage{a}` | the season of the following pages: 0 spring, 0.5 summer, 1 autumn (default: late summer) |
-| `\def\florilegiumseed{7}` | before `\usepackage`: a fixed seed for the document instead of the page-number seed |
+| `\florilegiumgrapesvine{variety}` | the variety from the page this is set on |
+| `\florilegiumgrapesage{a}` | the season of the following pages: 0 spring, 0.5 summer, 1 autumn (default: late summer) |
+| `\def\florilegiumgrapesseed{7}` | before `\usepackage`: a fixed seed for the document instead of the page-number seed |
 
 ## Build
 
@@ -144,8 +144,8 @@ code throughout, with no generative image models.
 ## Credits
 
 - [florilegium](https://github.com/kevinraymond/florilegium) is Kevin Raymond's. Its drawing core
-  (`florilegium-ink.lua`) and the page geometry and shipout hook in `florilegium.lua` and
-  `florilegium.sty` are his, trimmed to what the vine needs.
+  (`florilegium-grapes-ink.lua`) and the page geometry and shipout hook in `florilegium-grapes.lua`
+  and `florilegium-grapes.sty` are his, trimmed to what the vine needs.
 - The random numbers come from [mulberry32](https://gist.github.com/tommyettinger/46a874533244883189143505d203312c),
   Tommy Ettinger's generator, dedicated to the public domain (CC0).
 - The varieties' leaves and bunches follow the ampelography of German and English Wikipedia
@@ -161,4 +161,4 @@ code throughout, with no generative image models.
 ## License
 
 MIT, see [LICENSE](LICENSE). Copyright (c) 2026 Kevin Raymond, and Copyright (c) 2026 Jack
-Bracewell for the grapevine (`florilegium-vine.lua`).
+Bracewell for the grapevine (`florilegium-grapes-vine.lua`).

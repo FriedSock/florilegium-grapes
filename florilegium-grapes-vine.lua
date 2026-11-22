@@ -1,6 +1,6 @@
--- florilegium-vine.lua -- one grapevine of a chosen variety, trained up the page's margin
+-- florilegium-grapes-vine.lua -- one grapevine of a chosen variety, trained up the page's margin
 -- as a vineyard's is, in its own colors.
--- Copyright (c) 2026 Jack Bracewell. MIT License: see LICENSE or florilegium.sty.
+-- Copyright (c) 2026 Jack Bracewell. MIT License: see LICENSE or florilegium-grapes.sty.
 --
 -- A spur-pruned vine on a vertical shoot positioned trellis (see M.page for how it is laid
 -- out), and its organs:
@@ -11,10 +11,10 @@
 --     in a cone, a cylinder or a cone with a wing, painted from the back to the front;
 -- The season (g.age) ripens the grapes from green through veraison, and in autumn turns the
 -- leaves red (a black grape's) or yellow (a white one's).
--- Use: \usepackage[vine=pinot]{florilegium} (or saperavi, gewurztraminer, rkatsiteli,
+-- Use: \usepackage[vine=pinot]{florilegium-grapes} (or saperavi, gewurztraminer, rkatsiteli,
 -- regent, johanniter).
 
-local ink = require("florilegium-ink")
+local ink = require("florilegium-grapes-ink")
 local M = {}
 
 local sin, cos, sqrt, pi, floor, max, min, abs = math.sin, math.cos, math.sqrt, math.pi, math.floor, math.max,
@@ -89,14 +89,14 @@ local TRAITS = {
   johanniter = { lobes = { 5 }, depth = { 0.35, 0.5 }, tone = "pale", berry = { "round" }, bunch = { "cylindrical" },
     compact = 3 },
 }
--- the document's vine of a variety (docseed: \florilegiumseed, or 0), the same on every page
+-- the document's vine of a variety (docseed: \florilegiumgrapesseed, or 0), the same on every page
 local function vine(variety, docseed)
   local t = TRAITS[variety]
   if not t then
     local known = {}
     for k in pairs(TRAITS) do known[#known + 1] = k end
     table.sort(known)
-    error("florilegium: vine=" .. tostring(variety) .. "? a grape's variety is one of " .. table.concat(known, ", "), 0)
+    error("florilegium-grapes: vine=" .. tostring(variety) .. "? a grape's variety is one of " .. table.concat(known, ", "), 0)
   end
   local r = ink.rng(docseed * 104729 + 809)
   local function pick(list) return list[1 + floor(#list * r.u())] end
@@ -657,7 +657,7 @@ end
 --     fifth nodes, and most leaves there are plucked to let the light and air at them; higher,
 --     tendrils opposite the leaves, gripping the catch wires where they reach one;
 --   - in spring the shoots are short, in autumn canes with turned leaves.
--- g: the page (florilegium.lua's geometry, in cm), its seed, docseed, age and variety
+-- g: the page (florilegium-grapes.lua's geometry, in cm), its seed, docseed, age and variety
 function M.page(g)
   local rng = ink.rng(g.seed * 7919 + 811)
   local layout = rng.fork()
@@ -991,7 +991,7 @@ function M.page(g)
   ink.unclip()
 
   if texio then
-    texio.write_nl(string.format("florilegium: a %s vine, %d shoots, %d leaves, %d bunches, %d tendrils", sp.variety,
+    texio.write_nl(string.format("florilegium-grapes: a %s vine, %d shoots, %d leaves, %d bunches, %d tendrils", sp.variety,
       counts.shoot, counts.leaf, counts.bunch, counts.tendril))
   end
   ink.flush()

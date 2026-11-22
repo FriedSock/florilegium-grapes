@@ -1,23 +1,23 @@
-%% florilegium.sty -- a grapevine, drawn by Lua into the page's margin
+%% florilegium-grapes.sty -- a grapevine, drawn by Lua into the page's margin
 %% Derived from florilegium, https://github.com/kevinraymond/florilegium
 %% Copyright (c) 2026 Kevin Raymond, and 2026 Jack Bracewell (the grapevine).
 %% MIT License, in full at the end of these notes.
 %%
 %% LuaLaTeX only. The geometry of every leaf, grape and cane is computed in Lua
-%% (florilegium-vine.lua, florilegium-ink.lua) and written straight into the page as PDF
+%% (florilegium-grapes-vine.lua, florilegium-grapes-ink.lua) and written straight into the page as PDF
 %% path operators.
 %%
 %% Usage
-%%   \usepackage[vine=pinot]{florilegium}  a vine of that variety in the margin of every
+%%   \usepackage[vine=pinot]{florilegium-grapes}  a vine of that variety in the margin of every
 %%                                       page: pinot (the default), saperavi,
 %%                                       gewurztraminer, rkatsiteli, regent, johanniter
-%%   \usepackage[aging]{florilegium}       the vine ages from spring on the first page to
+%%   \usepackage[aging]{florilegium-grapes}       the vine ages from spring on the first page to
 %%                                       autumn on the last (two runs: the page count is
 %%                                       read from the .aux of the run before)
-%%   \florilegiumvine{variety}            the variety from the page this is set on
-%%   \florilegiumage{a}                   the season of the following pages: 0 spring,
+%%   \florilegiumgrapesvine{variety}            the variety from the page this is set on
+%%   \florilegiumgrapesage{a}                   the season of the following pages: 0 spring,
 %%                                       0.5 summer, 1 autumn (default: late summer)
-%%   \def\florilegiumseed{7}               before \usepackage: a fixed seed (any positive
+%%   \def\florilegiumgrapesseed{7}               before \usepackage: a fixed seed (any positive
 %%                                       integer) instead of the page-number seed
 %%
 %% The vine grows in the wider side margin: in a two-sided document (twoside, a wide outer
@@ -47,50 +47,50 @@
 %% SOFTWARE.
 %%
 \NeedsTeXFormat{LaTeX2e}[2020-10-01]
-\ProvidesPackage{florilegium}[2026/11/22 v3.0.0 a grapevine in the page margin, Lua-drawn]
+\ProvidesPackage{florilegium-grapes}[2026/11/22 v3.0.0 a grapevine in the page margin, Lua-drawn]
 \ifdefined\directlua\else
-  \PackageError{florilegium}{florilegium needs LuaLaTeX}{Compile with lualatex.}\endinput\fi
+  \PackageError{florilegium-grapes}{florilegium-grapes needs LuaLaTeX}{Compile with lualatex.}\endinput\fi
 \RequirePackage{tikz}
 \RequirePackage{eso-pic}
 
-\newif\ifflorilegium@aging
-\DeclareOption{aging}{\florilegium@agingtrue}
+\newif\ifflorilegiumgrapes@aging
+\DeclareOption{aging}{\florilegiumgrapes@agingtrue}
 %% key=value option: vine=<variety>
-\def\florilegium@vine{}
-\DeclareOption*{\expandafter\florilegium@option\CurrentOption==\@nil}
-\def\florilegium@option#1=#2=#3\@nil{%
-  \ifcsname florilegium@set@#1\endcsname\csname florilegium@set@#1\endcsname{#2}%
-  \else\PackageWarning{florilegium}{Unknown option `\CurrentOption'}\fi}
-\def\florilegium@set@vine#1{\def\florilegium@vine{#1}}
+\def\florilegiumgrapes@vine{}
+\DeclareOption*{\expandafter\florilegiumgrapes@option\CurrentOption==\@nil}
+\def\florilegiumgrapes@option#1=#2=#3\@nil{%
+  \ifcsname florilegiumgrapes@set@#1\endcsname\csname florilegiumgrapes@set@#1\endcsname{#2}%
+  \else\PackageWarning{florilegium-grapes}{Unknown option `\CurrentOption'}\fi}
+\def\florilegiumgrapes@set@vine#1{\def\florilegiumgrapes@vine{#1}}
 \ProcessOptions\relax
-\ifdefined\florilegiumseed\else\def\florilegiumseed{}\fi
+\ifdefined\florilegiumgrapesseed\else\def\florilegiumgrapesseed{}\fi
 
-\directlua{florilegium = require("florilegium")}
-\ifx\florilegium@vine\@empty\else
-  \directlua{florilegium.vine = "\luaescapestring{\florilegium@vine}"}\fi
-\newcommand\florilegiumvine[1]{\directlua{florilegium.vine = "\luaescapestring{#1}"}}
-\newcommand\florilegiumage[1]{\directlua{florilegium.age = florilegium.number("\string\\florilegiumage", "\luaescapestring{#1}", nil)}}
+\directlua{florilegiumgrapes = require("florilegium-grapes")}
+\ifx\florilegiumgrapes@vine\@empty\else
+  \directlua{florilegiumgrapes.vine = "\luaescapestring{\florilegiumgrapes@vine}"}\fi
+\newcommand\florilegiumgrapesvine[1]{\directlua{florilegiumgrapes.vine = "\luaescapestring{#1}"}}
+\newcommand\florilegiumgrapesage[1]{\directlua{florilegiumgrapes.age = florilegiumgrapes.number("\string\\florilegiumgrapesage", "\luaescapestring{#1}", nil)}}
 
 %% the page's seed: the page number, and the document's seed if it has one
-\def\florilegium@seed{%
-  \directlua{tex.sprint(florilegium.seed(\number\value{page}\ifx\florilegiumseed\@empty\else,
-    florilegium.number("\string\\florilegiumseed", "\luaescapestring{\florilegiumseed}", nil)\fi))}}
+\def\florilegiumgrapes@seed{%
+  \directlua{tex.sprint(florilegiumgrapes.seed(\number\value{page}\ifx\florilegiumgrapesseed\@empty\else,
+    florilegiumgrapes.number("\string\\florilegiumgrapesseed", "\luaescapestring{\florilegiumgrapesseed}", nil)\fi))}}
 
-\newcommand\florilegium@vinepage{%
+\newcommand\florilegiumgrapes@vinepage{%
 \begin{tikzpicture}[overlay]
-  \directlua{florilegium.twoside = \if@twoside true\else false\fi}%
-  \edef\flo@seed{\florilegium@seed}%
+  \directlua{florilegiumgrapes.twoside = \if@twoside true\else false\fi}%
+  \edef\flogr@seed{\florilegiumgrapes@seed}%
   % aging: the sheet's place among all the sheets of the last run, whatever the page numbers
-  \ifflorilegium@aging\ifnum\PreviousTotalPages>0
-    \directlua{florilegium.auto_age(\number\ReadonlyShipoutCounter, \PreviousTotalPages)}\fi\fi
-  \directlua{florilegium.page(\flo@seed)}%
+  \ifflorilegiumgrapes@aging\ifnum\PreviousTotalPages>0
+    \directlua{florilegiumgrapes.auto_age(\number\ReadonlyShipoutCounter, \PreviousTotalPages)}\fi\fi
+  \directlua{florilegiumgrapes.page(\flogr@seed)}%
 \end{tikzpicture}}
-\ifflorilegium@aging
+\ifflorilegiumgrapes@aging
   % the kernel records the number of sheets in the .aux, and the next run reads it back
   % (\PreviousTotalPages); after the last sheet, a run whose count changed asks for another
   \AddToHook{enddocument/afterlastpage}{%
     \ifnum\PreviousTotalPages=\ReadonlyShipoutCounter\else
-      \PackageWarningNoLine{florilegium}{The page count changed. Rerun to get the aging right}\fi}
+      \PackageWarningNoLine{florilegium-grapes}{The page count changed. Rerun to get the aging right}\fi}
 \fi
-\AddToShipoutPictureBG{\AtPageLowerLeft{\put(-\hoffset,\voffset){\florilegium@vinepage}}}
+\AddToShipoutPictureBG{\AtPageLowerLeft{\put(-\hoffset,\voffset){\florilegiumgrapes@vinepage}}}
 \endinput
