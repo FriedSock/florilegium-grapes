@@ -1,5 +1,5 @@
--- florilegium-theme-vine.lua -- a theme for florilegium: one grapevine of a chosen variety,
--- trained up the margin as a vineyard's is, in its own colors.
+-- florilegium-vine.lua -- one grapevine of a chosen variety, trained up the page's margin
+-- as a vineyard's is, in its own colors.
 -- Copyright (c) 2026 Jack Bracewell. MIT License: see LICENSE or florilegium.sty.
 --
 -- A spur-pruned vine on a vertical shoot positioned trellis (see M.page for how it is laid
@@ -11,13 +11,11 @@
 --     in a cone, a cylinder or a cone with a wing, painted from the back to the front;
 -- The season (g.age) ripens the grapes from green through veraison, and in autumn turns the
 -- leaves red (a black grape's) or yellow (a white one's).
--- Use: \usepackage[grown,vine=pinot]{florilegium} (or saperavi, gewurztraminer, rkatsiteli,
--- regent, johanniter), or theme=vine for a pinot.
+-- Use: \usepackage[vine=pinot]{florilegium} (or saperavi, gewurztraminer, rkatsiteli,
+-- regent, johanniter).
 
 local ink = require("florilegium-ink")
-local SPC = require("florilegium-species")
 local M = {}
-M.version = "2.1.0"                 -- the release; florilegium.lua checks that every file has the same
 
 local sin, cos, sqrt, pi, floor, max, min, abs = math.sin, math.cos, math.sqrt, math.pi, math.floor, math.max,
   math.min, math.abs
@@ -42,8 +40,7 @@ local BERRY = { dark = { 0.16, 0.1, 0.21 }, red = { 0.52, 0.13, 0.2 }, pale = { 
 local BLOOM = { dark = { 0.6, 0.64, 0.78 }, red = { 0.82, 0.66, 0.72 }, pale = { 0.94, 0.94, 0.78 } }
 
 -- ---------------------------------------------------------------- the varieties
--- what the genome does not say (florilegium-species.lua has the lobes, their depth and the
--- bunch): the leaf's size, how far its basal lobes close the stalk's sinus (its angle: 140
+-- each variety's leaf: its size, how far its basal lobes close the stalk's sinus (its angle: 140
 -- an open U, 170 nearly closed), its teeth; the bunch as the vineyard has it, its length in
 -- cm, its grape's diameter in mm and how many grapes it holds; the grape's own color where
 -- its tone's is not it, how thick its waxy bloom (saperavi's dusts it blue-grey), and white for
@@ -72,6 +69,40 @@ local VAR = {
   johanniter = { leaf = 1.0, basal = 140, teeth = 0.07, cm = 13, mm = 14, n = 100, ink = { 0.9, 0.8, 0.52 },
     alt = { 0.84, 0.84, 0.58 }, vary = 0.4, spots = true, hair = 0.15 },
 }
+-- and the traits a vine of the variety may take, one each drawn for the document: lobes (3
+-- or 5, as many as the leaf is cut into, any one of the list), depth (how deep its sinuses
+-- cut, a range), tone (dark, red or pale grapes), berry (round, oval), bunch (cylindrical,
+-- conical, winged) and compact (2 fairly dense, 3 dense). Pinot noir's leaf is slightly
+-- lobed, three to five; saperavi's three-lobed; regent's three-lobed, rarely five, cut
+-- medium-deep; johanniter's and rkatsiteli's five-lobed (Wikipedia's ampelography)
+local TRAITS = {
+  pinot = { lobes = { 3, 5 }, depth = { 0.15, 0.3 }, tone = "dark", berry = { "round", "round", "oval" },
+    bunch = { "cylindrical" }, compact = 3 },
+  saperavi = { lobes = { 3 }, depth = { 0.25, 0.4 }, tone = "dark", berry = { "oval", "round" }, bunch = { "conical" },
+    compact = 2 },
+  gewurztraminer = { lobes = { 3, 3, 3, 5 }, depth = { 0.08, 0.2 }, tone = "red", berry = { "oval" }, bunch = { "conical" },
+    compact = 3 },
+  rkatsiteli = { lobes = { 5 }, depth = { 0.35, 0.55 }, tone = "pale", berry = { "oval", "round" },
+    bunch = { "conical", "conical", "winged" }, compact = 2 },
+  regent = { lobes = { 3, 3, 3, 3, 5 }, depth = { 0.4, 0.55 }, tone = "dark", berry = { "round", "round", "oval" },
+    bunch = { "cylindrical", "cylindrical", "conical" }, compact = 3 },
+  johanniter = { lobes = { 5 }, depth = { 0.35, 0.5 }, tone = "pale", berry = { "round" }, bunch = { "cylindrical" },
+    compact = 3 },
+}
+-- the document's vine of a variety (docseed: \florilegiumseed, or 0), the same on every page
+local function vine(variety, docseed)
+  local t = TRAITS[variety]
+  if not t then
+    local known = {}
+    for k in pairs(TRAITS) do known[#known + 1] = k end
+    table.sort(known)
+    error("florilegium: vine=" .. tostring(variety) .. "? a grape's variety is one of " .. table.concat(known, ", "), 0)
+  end
+  local r = ink.rng(docseed * 104729 + 809)
+  local function pick(list) return list[1 + floor(#list * r.u())] end
+  return { variety = variety, teeth = pick(t.lobes), dissection = r.range(t.depth[1], t.depth[2]), berrytone = t.tone,
+    berryshape = pick(t.berry), bunch = pick(t.bunch), compact = t.compact }
+end
 -- the bunches drawn a little larger than life, as an illustrator enlarges the fruit
 local FRUIT = 1.3
 
@@ -529,7 +560,7 @@ local function tendril(r, L, c)
   local function arm(x, y, a, len, w)
     local pts, hand = { { x, y } }, r.chance(0.5) and 1 or -1
     local n = 10
-    for i = 1, n do
+    for _ = 1, n do
       a = a + hand * r.range(2, 6)
       x, y = x + len * 0.55 / n * cos(a * RAD), y + len * 0.55 / n * sin(a * RAD)
       pts[#pts + 1] = { x, y }
@@ -626,15 +657,13 @@ end
 --     fifth nodes, and most leaves there are plucked to let the light and air at them; higher,
 --     tendrils opposite the leaves, gripping the catch wires where they reach one;
 --   - in spring the shoots are short, in autumn canes with turned leaves.
-function M.page(g, grow)
+-- g: the page (florilegium.lua's geometry, in cm), its seed, docseed, age and variety
+function M.page(g)
   local rng = ink.rng(g.seed * 7919 + 811)
   local layout = rng.fork()
   ink.set_transform(ink.page_transform(g.mirror and g.pw))
-  local D = g.density or 1
-  local anim = g.anim
-  if anim then ink.record(true) end
   local lx = g.mirror and -1 or 1                -- the light's side in layout x: the page's upper left
-  local sp = SPC.vine(g.docseed or 0, g.vine or "pinot")
+  local sp = vine(g.vine or "pinot", g.docseed or 0)
   local v = VAR[sp.variety]
   local age = g.age or 0.8                        -- without a season, late summer: ripe grapes
   local ripe = clamp((age - 0.55) / 0.25, 0, 1)   -- green, then veraison, then ripe
@@ -642,8 +671,8 @@ function M.page(g, grow)
   local wooded = clamp((age - 0.62) / 0.3, 0, 1)  -- the shoots ripen to canes
   local grown = clamp(0.25 + 1.5 * age, 0.25, 1)  -- how far the shoots have grown
   local white = sp.berrytone == "pale" or v.white
-  local _, col, foot, spill = grow.regions(g, layout)
-  local regions = { col, foot, spill }
+  -- the margin's column, from the paper's edge to the text, from the foot of the page to its top
+  local col = { 0.3, 0.45, g.colright, g.ph - 0.5 }
   local x0, x1 = col[1] + 0.15, col[3] - 0.1
   local yg, yt = col[2] + 0.05, col[4] - 0.35
   local cw, H = x1 - x0, yt - yg
@@ -653,27 +682,9 @@ function M.page(g, grow)
   local wires = { yc + 0.3 * (yt - yc), yc + 0.58 * (yt - yc), yc + 0.84 * (yt - yc) }
   local counts = { shoot = 0, leaf = 0, bunch = 0, tendril = 0, grape = 0 }
 
-  local events, clock = {}, 0.3
-  local function event(step, dur)
-    local e = { t0 = clock, dur = dur or 0.4 }
-    clock = clock + (step or 0.1)
-    events[#events + 1] = e
-    return e
-  end
-  local GROWTH = { 0.3, 0.55, 0.75, 0.9 }
-  local function place(e, layer, x, y, a, fn)
+  local function place(layer, x, y, a, fn)
     ink.layer(layer)
-    if anim then
-      local r0, l0 = rng.save(), layout.save()
-      for k = 1, #GROWTH do
-        ink.tag({ e, (k - 1) / #GROWTH, k / #GROWTH })
-        ink.push() ink.translate(x, y) ink.rotate(a) ink.scale(GROWTH[k]) fn() ink.pop()
-        rng.load(r0) layout.load(l0)
-      end
-      ink.tag({ e, 1 })
-    end
     ink.push() ink.translate(x, y) ink.rotate(a) fn() ink.pop()
-    if anim then ink.tag(nil) end
   end
   -- depth: the canopy's things are layered by how near they are, -1 behind to 1 in front;
   -- the wood and the shoots sit in the middle
@@ -707,13 +718,13 @@ function M.page(g, grow)
     end
   end
   local tw = 1.1 * size
-  place(event(0.4, 1.0), MID - 2, 0, 0, 0, function()
+  place(MID - 2, 0, 0, 0, function()
     local r = rng.fork()
     for _, arm in ipairs(arms) do wood(r, arm.pts, 0.8 * size, 0.38 * size) end
     wood(r, trunk, tw, 0.95 * size)
   end)
   -- the wires, the fruiting wire under the cordon and the catch wires above it
-  place(event(0.05, 0.3), MID + 1, 0, 0, 0, function()
+  place(MID + 1, 0, 0, 0, function()
     for _, y in ipairs({ yc - 0.08, wires[1], wires[2], wires[3] }) do
       ink.moveto(col[1] - 0.3, y) ink.lineto(col[3] - 0.05, y + 0.01)
     end
@@ -835,7 +846,7 @@ function M.page(g, grow)
           end
         end
       end
-      at = at + layout.range(2.2, 2.9) * size / sqrt(D)
+      at = at + layout.range(2.2, 2.9) * size
     end
   end
 
@@ -866,7 +877,7 @@ function M.page(g, grow)
   for _, it in ipairs(items) do
     local k = it.kind
     if k == "spur" then
-      place(event(0.02, 0.2), MID - 1, 0, 0, 0, function()
+      place(MID - 1, 0, 0, 0, function()
         local q, e = it.q, it.e
         band({ { q[1], q[2] }, { lerp(q[1], e[1], 0.5), lerp(q[2], e[2], 0.5) + 0.02 }, { e[1], e[2] } }, 0.3 * size,
           0.2 * size, C.cane)
@@ -886,11 +897,11 @@ function M.page(g, grow)
         end
       end)
     elseif k == "shoot" then
-      place(event(0.05, 0.5), layer(it.z) == MID and MID or layer(it.z), 0, 0, 0, function()
+      place(layer(it.z) == MID and MID or layer(it.z), 0, 0, 0, function()
         band(it.pts, it.w0, 0.45 * it.w0, shootc)
       end)
     elseif k == "node" then
-      place(event(0.005, 0.1), MID, 0, 0, 0, function()
+      place(MID, 0, 0, 0, function()
         local p = it.p
         local ca, sa = dir(it.ta)
         ink.moveto(p[1] - 0.06 * size * sa, p[2] + 0.06 * size * ca) ink.lineto(p[1] + 0.06 * size * sa, p[2] - 0.06 * size * ca)
@@ -918,7 +929,7 @@ function M.page(g, grow)
       c = mix(c, { 0.48, 0.5, 0.24 }, 0.45 * old)
       local pc = mix(C.petiole, C.red, white and 0.1 or 0.35)
       local n, j = it.node, it.j
-      place(event(0.02, 0.4), layer(it.z), 0, 0, 0, function()
+      place(layer(it.z), 0, 0, 0, function()
         -- the leaf's stalk: out from the node, arching up, the blade hanging from its end;
         -- swollen where it joins the cane and where it meets the blade
         local pl = dist(n[1], n[2], j[1], j[2])
@@ -939,7 +950,7 @@ function M.page(g, grow)
     elseif k == "bunch" then
       counts.bunch = counts.bunch + 1
       local n, t = it.node, it.t
-      place(event(0.04, 0.5), layer(it.z), 0, 0, 0, function()
+      place(layer(it.z), 0, 0, 0, function()
         ink.moveto(n[1], n[2]) ink.curveto(lerp(n[1], t[1], 0.5), lerp(n[2], t[2], 0.5) + 0.05, t[1], t[2] + 0.04, t[1], t[2])
         ink.stroke(mix(C.shoot, C.cane, 0.45), 1.0, 1)
         ink.push() ink.translate(t[1], t[2])
@@ -951,7 +962,7 @@ function M.page(g, grow)
       counts.tendril = counts.tendril + 1
       local n = it.node
       if it.wire then
-        place(event(0.01, 0.3), layer(it.z), 0, 0, 0, function()
+        place(layer(it.z), 0, 0, 0, function()
           local r = rng.fork()
           local wxp = n[1] + r.sym(0.35) * size
           ink.moveto(n[1], n[2]) ink.curveto(lerp(n[1], wxp, 0.3), n[2] + 0.1, lerp(n[1], wxp, 0.8), it.wire + 0.12, wxp, it.wire)
@@ -964,27 +975,17 @@ function M.page(g, grow)
           ink.smooth(pts, false) ink.stroke(mix(C.tendril, C.cane, wooded), 0.35, 1)
         end)
       else
-        place(event(0.01, 0.3), layer(it.z), n[1], n[2], it.a, function()
+        place(layer(it.z), n[1], n[2], it.a, function()
           tendril(rng.fork(), it.L, mix(C.tendril, C.cane, wooded))
         end)
       end
     end
   end
 
-  -- assemble: a safety clip a little outside the regions, as the garden's
-  ink.tag(nil)
+  -- assemble: a clip a little outside the column, so nothing strays into the text
   ink.layer(0)
-  local bleed = g.bleed or 0
-  for _, rr in ipairs(regions) do
-    local cx1, cy1, cx2, cy2 = rr[1] - 0.25, rr[2] - 0.3, rr[3] + 0.3, rr[4] + 0.3
-    if bleed > 0 then
-      if rr[1] < 0.6 then cx1 = cx1 - bleed end
-      if rr[2] < 0.6 then cy1 = cy1 - bleed end
-      if rr[3] > g.pw - 0.6 then cx2 = cx2 + bleed end
-      if rr[4] > g.ph - 0.6 then cy2 = cy2 + bleed end
-    end
-    ink.poly({ { cx1, cy1 }, { cx2, cy1 }, { cx2, cy2 }, { cx1, cy2 } }, true)
-  end
+  ink.poly({ { col[1] - 0.25, col[2] - 0.3 }, { col[3] + 0.3, col[2] - 0.3 }, { col[3] + 0.3, col[4] + 0.3 },
+    { col[1] - 0.25, col[4] + 0.3 } }, true)
   ink.clip()
   ink.layer(99)
   ink.unclip()
@@ -993,31 +994,7 @@ function M.page(g, grow)
     texio.write_nl(string.format("florilegium: a %s vine, %d shoots, %d leaves, %d bunches, %d tendrils", sp.variety,
       counts.shoot, counts.leaf, counts.bunch, counts.tendril))
   end
-  if anim then
-    local total = 0
-    for _, e in ipairs(events) do total = max(total, e.t0 + e.dur) end
-    return { rec = ink.take_recording(), total = max(total, 0.5) }
-  end
   ink.flush()
-  return { stats = { motifs = counts.leaf + counts.bunch + counts.tendril, counts = counts,
-    vine = { variety = sp.variety, text = SPC.describe(sp) } } }
 end
-
--- the header's fleuron: a small vine leaf, its stalk running on into the head rule;
--- returns where the rule starts, on the page
-local function fleuron(rng, s, o)
-  local sp = SPC.vine(0, "pinot")
-  ink.push() ink.scale(s)
-  ink.push() ink.translate(0, 0.05) ink.rotate(150) ink.scale(1.15)
-  leaf(rng.fork(), C.leaf, VAR.pinot, sp.teeth, sp.dissection, 1)
-  ink.pop()
-  local c = (o and o.color) or ink.accent(0)
-  ink.moveto(0, 0.05) ink.curveto(0.3, 0.35, 0.7, 0.4, 1.0, 0.3) ink.curveto(1.3, 0.2, 1.7, 0.3, 2.0, 0.28)
-  ink.stroke(c, 0.4)
-  local rx, ry = ink.to_page(2.0, 0.28)
-  ink.pop()
-  return rx, ry
-end
-M.flora = { hedera = fleuron }
 
 return M

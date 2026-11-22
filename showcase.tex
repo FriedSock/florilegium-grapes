@@ -1,149 +1,21 @@
 % !TEX program = lualatex
-%% showcase.tex -- what the grown margin does besides growing: it reads the text.
-%% LuaLaTeX, two passes (the option aging reads the page count of the first):
-%%   lualatex showcase.tex && lualatex showcase.tex
+% The showcase: a page for each variety at harvest, then pinot noir through the year.
+%   lualatex showcase.tex
 \documentclass[11pt,a4paper]{article}
-\renewcommand\rmdefault{cmr}\renewcommand\sfdefault{cmss}\renewcommand\ttdefault{cmtt}
 \usepackage[T1]{fontenc}
 \usepackage[a4paper,left=68mm,right=22mm,top=32mm,bottom=30mm,headsep=8mm]{geometry}
-\usepackage{fancyhdr}
-\usepackage[grown,sections,headpieces,aging]{florilegium}
-
-\pagestyle{fancy}\fancyhf{}
-\fancyhead[R]{\small\textsc{A year in the margin}}
-\fancyfoot[R]{\small\thepage}
-\renewcommand\headrulewidth{0pt}
-\newcommand\code[1]{\texttt{\small #1}}
-
+\usepackage[vine=pinot]{florilegium}
+\usepackage{lipsum}
+\newcommand\variety[3]{\newpage\florilegiumvine{#1}\florilegiumage{#2}\section*{#3}\lipsum[1-4]}
 \begin{document}
-\section{Spring}
-
-\florilegiuminitial[5]{E}{very} page of this document grows its own garden, but the
-gardens here also read the text they surround. This first page is spring: the plant is
-young, its leaves are small and pale, and it is mostly in bud; the last page is autumn.
-The document loads the package with four options, and the sections that follow show what
-each of them does, along with a few things that need no option at all:
-\begin{center}\code{\textbackslash usepackage[grown,sections,headpieces,aging]\{florilegium\}}\end{center}
-
-The letter that opens this paragraph is one of them. It was set with
-\code{\textbackslash florilegiuminitial[5]\{E\}}, which reads the outline of the letter from an OpenType font (Latin
-Modern Bold, the OpenType twin of Computer Modern, unless another is named), paints it
-like a petal, and sets it in a tile five lines tall. A vine crosses the tile and passes
-over and under the strokes of the letter in turn; where it passes over, a thin halo of
-paper parts it from the letter. Leaves go where they fit and small flowers into the
-largest gaps, which for a B or an O are its counters. The letter is also typeset in the
-text, invisibly, so the paragraph still copies and searches as \emph{Every}.
-
-\subsection{Flowers at the headings}
-
-With the option \code{sections}, every numbered section and subsection gets a flower in the
-margin, beside its heading: the flowers of the plant nearest to it for a section, its buds
-for a subsection, painted in the copper of the accents, the way headings were once picked
-out in red. The heading carries an invisible mark. When the page is shipped out, the
-garden is drawn and the page box is searched for these marks, so the garden knows the
-height of each heading on the same page in the same run. Where the margin is already
-taken, by the large flower at the top of the page for example, the flower is made
-smaller or left out.
-
-\subsection{A headpiece over the section}
-
-The window of tracery above this section's heading is the option \code{headpieces}: every
-section gets one, sampled from a genome of its own as the plants are, its period first and
-then its arch, its lights, the figures in its head and their foils. A headpiece is a screen
-of lights under a flat arch. The heading leaves a mark, and when the page is shipped out the
-headpiece is drawn from that mark, on the side the margin is on, so that a vine can twine up
-its jamb with the leaves of the nearest plant and that plant can send a branch to the vine's
-foot. \code{\textbackslash florilegiumheadpiece} sets one by hand, with a seed, a width and
-traits of its own; \code{\textbackslash florilegiuminitialframe\{arch\}} opens an initial
-under a cusped arch, and \code{\textbackslash florilegiumornament\{quatrefoil\}} sets a
-foil in the line, \florilegiumornament{quatrefoil} like this.
-
-\subsection{A flower where the text asks for one}
-
-The same mark can be placed by hand. \code{\textbackslash florilegiumbloom} puts a flower
-in the margin beside the line in which it stands, like this
-one\florilegiumbloom, and an argument asks for something else of the plant nearest to it,
-\code{bud}, \code{leaf} or \code{tendril}, or for another plant of the page, by its role
-(\code{hero}, \code{showy}, \code{monocot}, \code{spray}) or by its body plan
-(\code{rose}, \code{lily}, \dots). It costs nothing on pages that have no marks and does
-not move the text.
-
-\section{Summer}
-
-By the middle of the document every plant is in flower, each cluster opening from its oldest
-bud. The page count needed to know where the
-middle is comes from the previous run, which is why the option \code{aging} asks for two;
-on the first run every page is summer, and LaTeX says so with a request to rerun.
-
-The seasons change what grows, not where. In spring most flowers are still in bud and sprays
-of closed buds take the place of many clusters, the leaves are smaller and paler, and a fern,
-where one grows, unrolls from its fiddleheads. Summer is the garden in full flower, which is also what a
-document without the option gets.
-
-\subsection{Plants of its own}
-
-The plants in this margin were not drawn from a fixed set of shapes. Each main stem is one
-plant of a \emph{species}, sampled from a genome: its body plan first (a rose, a lily, a
-pea, a daisy, an umbellifer, an iris and more), then the visitor its flowers are for, the
-color and form of the flower, how the flowers are clustered, the leaf with its shape, edge
-and veins, and the fruit. A body plan keeps the rules of botany, so a lily has its parts in
-threes and a pea flower has a keel and a pod. The document draws eight species from its
-seed, and each page grows four of them: a hero, whose largest flower opens at the top of the
-page, a second showy plant, a monocot and a spray along the foot. A branch belongs to the
-plant it grows from, so the margin reads as a few plants twined together rather than a
-bouquet of parts. The same species can be drawn on their own, in pure TikZ, with
-\code{\textbackslash usetikzlibrary\{florilegium\}}.
-
-\subsection{Visitors}
-
-Most pages have visitors, and they come for the plants. A species' flowers are made for one
-kind of visitor, a bee, a butterfly or a moth, a bird, a beetle or a hoverfly, and it flies in
-near that plant's stems; a snail climbs a main stem, a seed-eater perches on a twig of its own,
-a caterpillar eats a leaf it has bitten, and a dragonfly hunts by the monocot. Each is sampled
-from a genome too, its kind first, then its markings and its pose, and about three come to a
-page. They are drawn from their own random stream, so a page that no visitor came to is exactly
-the page it would have been without them; the option \code{novisitors} leaves them all out, and
-the plants grow into the room they would have taken. In the growth
-animation they fly in, or crawl up their stems, along the way, each to a hole of its own.
-
-\subsection{Watching it grow}
-
-Every garden can be watched as it grows. \code{make grow-7} records the growth of seed 7
-once, while the page is laid out: every stem is also drawn as shorter prefixes of itself,
-and every motif at a few smaller sizes with the same random draws. Each frame is then a
-page that writes the pieces whose time has come, in their original painting order, so the
-last frame is exactly the finished page. A short script turns the frames into a GIF and an
-MP4; \code{EXPLAIN=1} adds a dashed circle for each free space the loop picks, just before
-a branch grows to it. The stems rise first and the leaves open as their tips pass; then
-the large holes fill, slowly, and the small ones last, quickly.
-
-\subsection{One seed, one garden}
-
-Nothing changes from one run to the next. A page's seed comes from its page number, or
-from \code{\textbackslash def\textbackslash florilegiumseed\{7\}} for all of them, and
-every decision is drawn from random streams derived from it: the layout from one, each
-primitive from a fork of another, and the species, the visitors and the season each from
-their own.
-A page without visitors, or without an age, is therefore exactly the page it would have
-been without those features. The same source always gives the same PDF.
-
-\subsection{Colors}
-
-The whole palette comes from one color, called \code{ink}. Defining it with
-\code{\textbackslash definecolor\{ink\}\{HTML\}\{5B2A1F\}} paints the garden in sepia, \code{2F6B4F} in green, \code{8E1B3A} in crimson: the ramp from
-the darkest stroke to the palest wash is computed from that one hue, so the light end of
-it never turns gray. A second color, \code{accent}, is the copper of the hairlines, the
-sparkles and the flowers' eyes, and in autumn of some of the leaves.
-
-\section{Autumn}
-
-On the last page the garden goes to seed. Fewer flowers open, and each species' clusters
-turn to its own fruit, pods, hips, berries, capsules or seed clocks; loose petals have fallen
-into the space below the flowers; and some of the leaves have turned copper.
-\code{\textbackslash florilegiumage\{0.8\}} sets the age by hand instead, from 0, spring,
-through 0.5, summer, to 1, autumn, for all the pages that follow.
-
-The text ends here, early on its page, and \code{\textbackslash florilegiumtextend} tells
-the garden so: it grows into the space below these lines as well.
-\florilegiumtextend
+\variety{pinot}{0.8}{Pinot Noir}
+\variety{saperavi}{0.8}{Saperavi}
+\variety{gewurztraminer}{0.8}{Gewürztraminer}
+\variety{rkatsiteli}{0.8}{Rkatsiteli}
+\variety{regent}{0.8}{Regent}
+\variety{johanniter}{0.8}{Johanniter}
+\variety{pinot}{0.15}{Pinot Noir in spring}
+\variety{pinot}{0.5}{Pinot Noir in summer}
+\variety{pinot}{0.7}{Pinot Noir at veraison}
+\variety{pinot}{1}{Pinot Noir in autumn}
 \end{document}

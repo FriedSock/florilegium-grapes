@@ -1,58 +1,18 @@
--- florilegium.lua -- the TeX-facing side of florilegium.sty: page geometry,
--- colors, seeds, the TikZ transform, and the dispatch of primitives.
--- Copyright (c) 2026 Kevin Raymond. MIT License: see LICENSE or florilegium.sty.
+-- florilegium.lua -- the glue between florilegium.sty and the vine: the page's layout, its
+-- seed and season, and the vine drawn into its margin as the page ships out.
+-- Copyright (c) 2026 Kevin Raymond, 2026 Jack Bracewell. MIT License: see LICENSE or
+-- florilegium.sty.
 
-local ink = require("florilegium-ink")
-local flora = require("florilegium-flora")
-local M = { ink = ink, flora = flora }
-
--- The release this file belongs to. Every florilegium-*.lua says the same in its
--- M.version, and florilegium.sty says v<version> in \ProvidesPackage. TeX looks each
--- file up on its own, so files from two releases can meet (a set installed in ~/texmf,
--- a newer florilegium.sty and florilegium.lua beside the document); check_versions
--- stops such a mix before anything is drawn. A release changes all of them together.
-M.version = "2.1.0"
-local PARTS = { "ink", "flora", "grow", "authored", "figures", "theme-geometric", "theme-math", "theme-shells", "theme-vine", "initial", "svg",
-  "species", "pgfmath", "native", "tracery", "shell" }
-
-local function where(file, format, module)     -- " (path)" for the message, if it can be found
-  local ok, path = pcall(function()
-    if context and resolvers then return resolvers.findfile(file) end   -- ConTeXt: no kpse
-    return kpse.find_file(file, format)
-  end)
-  if not (ok and path) and module and package.searchpath then path = package.searchpath(module, package.path) end
-  return path and (" (" .. path .. ")") or ""
-end
-local function mixed(file, v)
-  error(string.format("florilegium: %s is from %s, florilegium.lua from release %s. Copy florilegium.sty "
-    .. "and every florilegium*.lua from one release.", file, v and ("release " .. v) or "an earlier release", M.version), 0)
-end
--- every part of the package that is loaded, and inside LuaLaTeX florilegium.sty
-function M.check_versions()
-  for _, part in ipairs(PARTS) do
-    local name = "florilegium-" .. part
-    local m = package.loaded[name]
-    if type(m) == "table" and m.version ~= M.version then mixed(name .. ".lua" .. where(name .. ".lua", "lua", name), m.version) end
-  end
-  -- the pure-TikZ library, if the document loaded it (\usetikzlibrary{florilegium})
-  local lib = token and token.get_macro and token.get_macro("ver@tikzlibraryflorilegium.code.tex")
-  if lib and lib:match("v(%d[%d.]*)") ~= M.version then
-    mixed("tikzlibraryflorilegium.code.tex" .. where("tikzlibraryflorilegium.code.tex", "tex"), lib:match("v(%d[%d.]*)"))
-  end
-  local sty = token and token.get_macro and token.get_macro("ver@florilegium.sty")
-  if sty then
-    local v = sty:match("v(%d[%d.]*)")
-    if v ~= M.version then mixed("florilegium.sty" .. where("florilegium.sty", "tex"), v) end
-  end
-end
+local vine = require("florilegium-vine")
+local M = {}
 
 local SP_CM = 2.54 / (72.27 * 65536)          -- cm per scaled point
 local function cm(name) return tex.dimen[name] * SP_CM end
 
--- the page layout, in cm from the lower-left corner of the paper. The garden
--- grows in the wider side margin: when that is the right one (the outer margin
--- of a right-hand page in a two-sided document), the layout is made for the
--- mirrored page and drawn reflected (g.mirror; ink.page_transform).
+-- the page layout, in cm from the lower-left corner of the paper. The vine grows in the
+-- wider side margin: when that is the right one (the outer margin of a right-hand page in a
+-- two-sided document), the layout is made for the mirrored page and drawn reflected
+-- (g.mirror; ink.page_transform)
 M.twoside = false                             -- \if@twoside, set at each shipout
 function M.geometry()
   local inch = 2.54
@@ -66,581 +26,48 @@ function M.geometry()
     g.mirror = true
     g.textleft, g.textright = g.pw - g.textright, g.pw - g.textleft
   end
-  g.ytop = g.ph - inch - tex.voffset * SP_CM - cm("topmargin") - cm("headheight") - cm("headsep")
-  g.ybot = g.ytop - cm("textheight")
   g.colright = g.textleft - 0.4
-  g.headrule = g.ytop + cm("headsep") - 0.1
-  g.footy = g.ybot - cm("footskip")
   return g
 end
 
--- colors: `ink` sets the hue of the whole ramp, `accent` the copper
-local current = { 0x24 / 255, 0x56 / 255, 0xC4 / 255, 0.71, 0.40, 0.18 }
-function M.colors(ir, ig, ib, ar, ag, ab)
-  current = { ir, ig, ib, ar, ag, ab }
-  ink.set_ink(ir, ig, ib)
-  ink.set_accent(ar, ag, ab)
-end
-
--- a number the user wrote (density=, intensity=, an ornament's angle=, \florilegiumseed,
--- \florilegiumage): its value, or, when it is not a number, the default, with a warning
--- in the log (once for each text) that says what was used instead (`instead`, or the default)
-local warned = {}
-local function warn(msg)
-  if not warned[msg] and luatexbase and luatexbase.module_warning then
-    warned[msg] = true
-    luatexbase.module_warning("florilegium", msg)
-  end
-end
-function M.number(key, text, default, instead)
+-- a number the user wrote (\florilegiumseed, \florilegiumage): its value, or, when it is not
+-- a number, the default, with a warning in the log
+function M.number(key, text, default)
   local v = tonumber(text)
   if v and v - v == 0 then return v end         -- a finite number (inf - inf and nan - nan are nan)
-  warn(string.format(key:sub(1, 1) == "\\" and "%s{%s} is not a number; using %s" or "%s=%s is not a number; using %s",
-    key, text, instead or tostring(default)))
+  if luatexbase and luatexbase.module_warning then
+    luatexbase.module_warning("florilegium", string.format("%s{%s} is not a number; ignored", key, text))
+  end
   return default
 end
--- a seed as ink's generator takes it: a whole number of any size (its arithmetic wraps), or a
--- decimal for which seed * k (the largest factor it meets) is still one; a larger decimal
--- (1e20, 1e999) is no seed, nil with a warning, where it stopped the drawing with "number has
--- no integer representation"
-local function seedvalue(v, k, key, instead)
-  if math.type(v) == "float" and math.type(math.floor(v * k + 401)) ~= "integer" then
-    warn(string.format("%s %g is too large for a seed; using %s", key, v, instead))
-    return nil
-  end
-  return v
-end
 
--- one rng per page; primitives drawn from TeX fork it in call order
-local page_rng = ink.rng(1)
-M.docseed = 0                                 -- \florilegiumseed, or 0: the species pool
+-- the page's seed: from the page number, and the document's seed if it has one
+M.docseed = 0                                 -- \florilegiumseed, or 0
 function M.seed(page, fixed)
-  fixed = fixed and seedvalue(fixed, 104729, "\\florilegiumseed", "the page's own seed")
-  M.docseed = fixed or 0
-  local s = fixed and (fixed * 7919 + page * 131) or (page * 97 + 1030)
-  page_rng = ink.rng(s)
-  return s
+  M.docseed = fixed and math.floor(fixed) or 0
+  return fixed and (M.docseed * 7919 + page * 131) or (page * 97 + 1030)
 end
 
--- a drawing that fails (a helper given as a primitive, a number that is not one, a theme
--- that cannot be loaded) leaves ink as it found it, so that the next ornament or page draws
--- as always: what it drew is dropped, its ghost lift and pale are put back, and the error
--- goes to TeX as one message, without a Lua traceback
-local function guarded(fn)
-  return function(...)
-    local lift, pale = ink.get_lift(), ink.set_pale(0)
-    ink.set_pale(pale)
-    local ok, err = pcall(fn, ...)
-    if not ok then
-      ink.take_recording() ink.drop() ink.set_lift(lift) ink.set_pale(pale)
-      err = tostring(err)
-      tex.error(err:find("^florilegium") and err or "florilegium: " .. err)
-    end
-  end
-end
-
--- the current pgf transformation (TikZ scopes) as an ink transform: local cm -> page bp
-function M.sync_transform()
-  local C = ink.CM
-  local bp = 72 / 72.27 / 65536
-  ink.set_transform({
-    tonumber(token.get_macro("pgf@pt@aa")) * C, tonumber(token.get_macro("pgf@pt@ab")) * C,
-    tonumber(token.get_macro("pgf@pt@ba")) * C, tonumber(token.get_macro("pgf@pt@bb")) * C,
-    tex.dimen["pgf@pt@x"] * bp, tex.dimen["pgf@pt@y"] * bp })
-end
-
--- \florilegiumdraw{name}{s, opts}: one primitive at the origin of the current TikZ
--- scope; the names of the current theme's primitives work too
-local scaled = { leaf = true, leaflet = true, petal = true }
--- the theme in use: M.theme, unless it cannot be loaded, which is reported once (with the
--- first ornament or page after it was set) and dropped, so that the garden grows without it
-local function usable_theme()
-  if M.theme == "" or M.theme == "flora" then M.theme = nil end
-  if M.theme then
-    local ok, err = pcall(require("florilegium-grow").theme, M.theme)
-    if not ok then
-      M.theme = nil
-      tex.error(tostring(err), { "The margin grows without a theme until another one is set." })
-    end
-  end
-  return M.theme
-end
-local function primitives() return require("florilegium-grow").theme(usable_theme()) end
-function M.draw(name, s, o)
-  local F = primitives()
-  local fn = F[name]
-  if type(fn) ~= "function" then tex.error("florilegium: unknown primitive '" .. tostring(name) .. "'") return end
-  M.sync_transform()
-  local rng = page_rng.fork()
-  if name == "ghost" then
-    F.ghost(o and o.lift, function() M.draw_inner(s, o, rng) end)
-  elseif scaled[name] then
-    ink.scale(s or 1) fn(rng, o)
-  else
-    fn(rng, s, o)
-  end
-  ink.flush()
-end
--- \florilegiumdraw{ghost}{"flower", {s=1.4}} draws any primitive pale
-function M.draw_inner(name, o, rng)
-  o = o or {}
-  local F = primitives()
-  local fn = F[name]
-  if type(fn) ~= "function" then error("florilegium: unknown primitive '" .. tostring(name) .. "'", 0) end
-  if scaled[name] then ink.scale(o.s or 1) fn(rng, o) else fn(rng, o.s or 1, o) end
-end
-M.draw = guarded(M.draw)
-
--- ---------------------------------------------------------------- ornaments in the text
--- \florilegiumornament[size, ink, accent, angle, seed]{name}: one primitive in a box
--- of side `size` (sp) on the baseline, like a letter (its depth 0.15 of the size).
--- Where each primitive sits in that box: its origin (x, y as fractions of the
--- side), its scale, its angle, and options for it.
-local ORNAMENT = {
-  leaf = { 0.2, 0.1, 1.02, -40 }, leaflet = { 0.2, 0.1, 1.0, -40 }, petal = { 0.3, 0.02, 1.0, -30 },
-  bud = { 0.35, 0.0, 0.95, -20 }, bell = { 0.5, 0.97, 0.95, 0 }, sprig = { 0.4, 0.0, 1.0, -10 },
-  cyme = { 0.35, 0.0, 0.95, -10, { side = -1 } }, umbel = { 0.5, 0.05, 0.8, 0 }, tendril = { 0.95, 0.5, 0.45, 0 },
-  flower = { 0.5, 0.5, 0.47, 0 }, blossom = { 0.5, 0.5, 0.48, 0 }, floret = { 0.5, 0.5, 0.46, 0 },
-  lily = { 0.5, 0.45, 0.6, 0 }, seedhead = { 0.5, 0.42, 0.42, 0, { drift = 0 } },
-  butterfly = { 0.5, 0.5, 0.98, 0 }, bee = { 0.5, 0.5, 0.8, -30, { trail = false } },
-  snail = { 0.5, 0.35, 0.55, -90 }, bird = { 0.5, 0.02, 0.95, 0 },
-  sparkle = { 0.5, 0.5, 0.3, 0 }, rosette = { 0.5, 0.5, 0.38, 0 }, hedera = { 0.45, 0.62, 0.36, 0 },
-}
-local function hex(h) return tonumber(h:sub(1, 2), 16) / 255, tonumber(h:sub(3, 4), 16) / 255, tonumber(h:sub(5, 6), 16) / 255 end
--- an ornament's ink= or accent=: six hex digits, or "" for the current color; anything
--- else is an error, and the ornament keeps the current color
-local function hexkey(key, h)
-  if h == "" or h:match("^%x%x%x%x%x%x$") then return h end
-  tex.error("florilegium: " .. key .. "=" .. h .. " is not six hex digits, like 5B2A1F",
-    { "The ornament is drawn in the current " .. key .. " color." })
-  return ""
-end
-local nornament = 0
-local HELPER = { ghost = true, branch_path = true, mottle = true, streak = true, streak3 = true, walk = true, stem = true, motifs = true }
--- ornaments of tracery (florilegium-tracery.lua): a foiled circle with that many foils,
--- or a rose window, sampled for the role with the trait fixed
-local TRACERY = { trefoil = { "ornament", "kind=foil, foils=3" }, quatrefoil = { "ornament", "kind=foil, foils=4" },
-  cinquefoil = { "ornament", "kind=foil, foils=5" }, sexfoil = { "ornament", "kind=foil, foils=6" }, rose = { "rose", "kind=rose" } }
--- shells by name (board #5340): the kind fixed, the rest sampled from the ornament's seed
-local SHELLS = { scallop = "kind=scallop, view=outside", ammonite = "kind=ammonite", nautilus = "kind=nautilus",
-  whelk = "kind=whelk, view=mouth", cowrie = "kind=cowrie, view=back" }
-function M.ornament(name, size, inkhex, acchex, angle, seed)
-  local F = primitives()
-  local fn = F[name]
-  local tr, sh = TRACERY[name], SHELLS[name]
-  if not tr and not sh and (type(fn) ~= "function" or HELPER[name]) then tex.error("florilegium: unknown primitive '" .. tostring(name) .. "'") return end
-  nornament = nornament + 1
-  inkhex, acchex = hexkey("ink", inkhex), hexkey("accent", acchex)
-  -- the k-th ornament of the document always gets the same shape, unless a seed
-  -- is given; seed=random gives a new one every time the document is built
-  local s
-  if seed == "random" then s = (os.time() % 999983) * 7919 + math.floor(os.clock() * 1e6) + nornament * 131
-  else
-    local n = seed ~= "" and seedvalue(M.number("seed", seed, nil, "the ornament's own"), 7919, "seed", "the ornament's own")
-    s = n and n * 7919 + 17 or nornament * 7919 + 4243
-  end
-  if inkhex ~= "" or acchex ~= "" then
-    local c = current
-    M.colors(inkhex ~= "" and hex(inkhex) or c[1], inkhex ~= "" and select(2, hex(inkhex)) or c[2], inkhex ~= "" and select(3, hex(inkhex)) or c[3],
-      acchex ~= "" and hex(acchex) or c[4], acchex ~= "" and select(2, hex(acchex)) or c[5], acchex ~= "" and select(3, hex(acchex)) or c[6])
-    current = c
-  end
-  local S = size * SP_CM
-  local p = ORNAMENT[name] or { 0.5, 0.5, 0.46, 0 }
-  ink.set_transform({ ink.CM, 0, 0, ink.CM, 0, 0 })
-  ink.translate(S * p[1], S * (p[2] - 0.15))
-  ink.rotate(p[4] + (angle or 0))
-  if tr then
-    -- a window of tracery stands on its base: down by its radius, then as wide as the disc
-    local species = require("florilegium-species")
-    local w = species.tsample(s % 2147483646 + 1, tr[1], nil, tr[2] and species.fixes(tr[2], "tracery") or nil)
-    ink.translate(0, -S * p[3])
-    require("florilegium-tracery").draw(w, s, 2 * S * p[3])
-  elseif sh then
-    -- a shell, centered in the disc
-    local species = require("florilegium-species")
-    local x = species.shsample(s % 2147483646 + 1, "any", nil, species.fixes(sh, "shell"))
-    require("florilegium-shell").draw(x, s, 1.9 * S * p[3], true)
-  elseif scaled[name] then ink.scale(S * p[3]) fn(ink.rng(s), p[5] or {})
-  else fn(ink.rng(s), S * p[3], p[5] or {}) end
-  ink.flush()
-  if inkhex ~= "" or acchex ~= "" then M.colors(table.unpack(current)) end
-end
-M.ornament = guarded(M.ornament)
-
--- a window of tracery at the origin of the current TikZ scope, `width` cm wide (the
--- outermost molding included), sampled for a role from a seed, some traits fixed
--- (board #5236); its height is handed back to TeX in \flo@traceryheight, in cm
-function M.tracery(seed, role, width, traits)
-  M.sync_transform()
-  local species = require("florilegium-species")
-  local fix = traits and traits ~= "" and species.fixes(traits, "tracery") or nil
-  local w = species.tsample(seed, role, nil, fix)
-  local h = require("florilegium-tracery").draw(w, seed * 7919 + 601, width)
-  ink.flush()
-  -- under the package's catcodes, since the document's would split the name at the @
-  tex.sprint(luatexbase.registernumber("catcodetable@atletter"),
-    string.format("\\def\\flo@traceryheight{%.4f}", h))
-end
-M.tracery = guarded(M.tracery)
-
--- a shell at the origin of a TikZ scope, `size` cm across at most, its base on the origin
--- (the scratch sheets; the pic and the margin come later, board #5339 and #5340). The
--- drawing's seed is seed + 1, as a pic's is
-function M.shell(seed, role, size, traits)
-  M.sync_transform()
-  local species = require("florilegium-species")
-  local fix = traits and traits ~= "" and species.fixes(traits, "shell") or nil
-  local s = species.shsample(seed, role, nil, fix)
-  require("florilegium-shell").draw(s, seed + 1, size)
-  ink.flush()
-end
-M.shell = guarded(M.shell)
-
--- \florilegiumheadpiece: a headpiece of tracery in a box of the given width (sp), its
--- sill on the baseline, the k-th of the document unless a seed is given. With the
--- margin on, the box is only reserved here (the window is drawn once to measure it and
--- dropped) and a mark carries the sampled window: the margin draws it at shipout, from
--- the mark's place on the page, when it knows which side it is on, with a vine up the
--- jamb on the margin's side (`vine` auto; left, right or none to choose), the nearest
--- plant's leaves on it, and a branch from that plant to the vine's foot
--- (florilegium-grow.lua: headpiece_mark). Under nomargin it is drawn here, without a vine.
-local nheadpiece = 0
-function M.headpiece(seed, role, width, traits, vine, margin)
-  nheadpiece = nheadpiece + 1
-  local species = require("florilegium-species")
-  local n = seed ~= "" and seedvalue(M.number("seed", seed, nil, "the headpiece's own"), 7919, "seed", "the headpiece's own")
-  local s = n or nheadpiece
-  local fix = traits ~= "" and species.fixes(traits, "tracery") or nil
-  local w = species.tsample(s, role, nil, fix)
-  local S = width * SP_CM
-  ink.set_transform({ ink.CM, 0, 0, ink.CM, 0, 0 })
-  ink.translate(S / 2, 0)
-  local h = require("florilegium-tracery").draw(w, s * 7919 + 601, S)
-  if margin then
-    ink.drop()
-    M.mark("headpiece", { w = w, s = s, S = S, vine = vine, h = h })
-  else
-    ink.flush()
-  end
-  tex.sprint(luatexbase.registernumber("catcodetable@atletter"), string.format("\\def\\flo@hp@height{%.4fcm}", h))
-end
-M.headpiece = guarded(M.headpiece)
--- a headpiece drawn at shipout where its mark stands (page cm), the vine on the
--- margin's side unless the command chose one; `leaf(rng, L)` draws the page's plant's
--- leaf on the vine. Returns the vine's foot in page cm, or nothing without a vine
-local function headpiece_at(mk, g, leaf, bare)
-  local a = mk.arg
-  if type(a) ~= "table" or not a.w then return end
-  local vine = a.vine
-  if vine == "auto" then vine = g.mirror and "right" or "left" end
-  local side = not bare and (vine == "left" and -1 or vine == "right" and 1) or nil
-  ink.push()
-  ink.set_transform(ink.page_transform())
-  ink.translate(mk.x + a.S / 2, mk.y)
-  local _, fx, fy = require("florilegium-tracery").draw(a.w, a.s * 7919 + 601, a.S, side, leaf)
-  ink.pop()
-  if fx then return mk.x + a.S / 2 + fx, mk.y + fy end
-end
-
--- the header: a copper ivy leaf (or the theme's fleuron) whose stem becomes the head rule
-function M.head(g)
-  ink.set_transform(ink.page_transform(g.mirror and g.pw))
-  ink.push()
-  ink.translate(g.colright - 0.55, g.headrule + 0.02)
-  local x, y = primitives().hedera(page_rng.fork(), 0.36)
-  if g.mirror then x = g.pw - x end           -- hedera answers on the page, not in the mirrored layout
-  ink.pop()
-  local e = g.textright
-  ink.moveto(x, y) ink.curveto(x + 1.0, y, x + 1.5, g.headrule, x + 2.5, g.headrule) ink.lineto(e, g.headrule)
-  ink.stroke(ink.accent(0), 0.4)
-  ink.circle(e, g.headrule, 0.03) ink.fill(ink.accent(0))
-  ink.flush()
-end
-
--- ---------------------------------------------------------------- marks in the text
--- \florilegiumbloom[motif] and (option sections) the section headings leave a
--- whatsit in the text. The page box is searched for them at shipout, when the
--- garden is drawn, so the garden knows the height of those lines on the same
--- page in the same run.
-local MARK = 0x464C4F                         -- "FLO"
-local marks = {}
-function M.mark(kind, arg)
-  marks[#marks + 1] = { kind = kind, arg = arg }
-  local n = node.new("whatsit", "user_defined")
-  n.user_id, n.type, n.value = MARK, 100, #marks
-  node.write(n)
-end
-
-local HLIST, VLIST, GLUE, KERN, RULE, WHATSIT = node.id("hlist"), node.id("vlist"), node.id("glue"), node.id("kern"), node.id("rule"), node.id("whatsit")
-local USER = node.subtype and node.subtype("user_defined")   -- nil in LuaMetaTeX (ConTeXt), which has its own walk
--- walk a box list; y grows downward from the top of the outer box, x rightward
-local function walk(head, parent, x, y, vertical, out)
-  for n in node.traverse(head) do
-    local id = n.id
-    if id == HLIST or id == VLIST then
-      if vertical then
-        local base = y + n.height
-        if n.list then walk(n.list, n, x + n.shift, id == VLIST and y or base, id == VLIST, out) end
-        y = base + n.depth
-      else
-        local base = y + n.shift
-        if n.list then walk(n.list, n, x, id == VLIST and base - n.height or base, id == VLIST, out) end
-        x = x + n.width
-      end
-    elseif id == GLUE then
-      local w = node.effective_glue(n, parent)
-      if vertical then y = y + w else x = x + w end
-    elseif id == KERN then
-      if vertical then y = y + n.kern else x = x + n.kern end
-    elseif id == RULE then
-      if vertical then y = y + n.height + n.depth else x = x + n.width end
-    elseif id == WHATSIT and n.subtype == USER and n.user_id == MARK then
-      local m = marks[n.value]
-      if m then out[#out + 1] = { kind = m.kind, arg = m.arg, x = x, y = y } end
-    elseif not vertical then
-      x = x + node.dimensions(n, n.next)
-    end
-  end
-end
--- the marks on the page being shipped out, in page cm from the lower-left corner
-function M.page_marks(box)
-  local b = box and tex.box[box]
-  if not b then return {} end
-  local out = {}
-  walk(b.list, b, 0, 0, b.id == VLIST, out)
-  local ph, inch = tex.dimen.paperheight * SP_CM, 2.54
-  for _, m in ipairs(out) do
-    m.x = inch + tex.hoffset * SP_CM + m.x * SP_CM
-    m.y = ph - inch - tex.voffset * SP_CM - m.y * SP_CM
-  end
-  return out
-end
-
--- ---------------------------------------------------------------- initials
--- \florilegiuminitial: a tile of side `side` (sp) whose top is the cap height
--- above the current baseline and whose left edge is `hang` (sp) to the left of
--- the current point, the start of the paragraph's first, indented line.
-M.initial_font = "lmroman10-bold.otf"
-M.initial_frame = "plain"                     -- \florilegiuminitialframe: plain, or arch (tracery)
-function M.initial(letter, side, hang, cap)
-  local bp = 72 / 72.27 / 65536
-  ink.set_transform({ ink.CM, 0, 0, ink.CM, -hang * bp, (cap - side) * bp })
-  local initial = require("florilegium-initial")
-  M.check_versions()                          -- loaded with the first initial, so checked here
-  local ok, err = initial.draw(page_rng.fork(), side * SP_CM, letter, { font = M.initial_font, frame = M.initial_frame })
-  if not ok then tex.error("florilegium: " .. tostring(err)) end
-  ink.flush()
-end
-M.initial = guarded(M.initial)
--- the letter is also typeset in the text, in PDF's invisible text rendering
--- mode, so that the paragraph still copies and searches as "This", not "his"
-function M.hidden(on)
-  local n = node.new("whatsit", "pdf_literal")
-  n.mode = 1                                  -- page level, outside the text object
-  n.data = on and "3 Tr" or "0 Tr"
-  node.write(n)
-end
-
--- ---------------------------------------------------------------- aging
--- a garden's age: 0 spring (buds), 0.5 summer, 1 autumn (seed heads, falling
--- petals); nil leaves it as it always was. \florilegiumage sets it; the option
--- aging spreads it over the document, from the page count of the last run.
+-- the season: 0 spring, 0.5 summer, 1 autumn; nil is late summer. \florilegiumage sets it;
+-- the option aging spreads it over the document, from the page count of the last run
 M.age = nil
 function M.auto_age(page, last) M.age = last > 1 and math.min(1, (page - 1) / (last - 1)) or 0.5 end
 
--- the growth animation: after \florilegiumframe[explain]{k}{n}, a grown page
--- shows frame k of n of its garden's growth (animation.tex, tools/animate.py).
--- The garden is recorded once and each frame writes the part grown so far.
-local frame, recorded = nil, {}
-function M.frame(k, n, explain) frame = { k = k, n = n, explain = explain == "explain" } end
+-- the variety (option vine=...)
+M.vine = "pinot"
 
--- text a theme sets in the margin (captions, glyphs, equations): TeX nodes in the
--- margin picture at {x, y} in layout cm, by their anchor (default north: the top
--- of the text centered there). Small ones in 5.5 pt, others in 6.5 pt or, with
--- `scale`, 10 pt scaled; `rotate` (degrees), `color` ({r, g, b}), `opacity`. On a
--- mirrored page east and west trade places and rotations turn the other way.
-function M.captions(g, list, shown)
-  if not list or #list == 0 then return end
-  local c = ink.tone(0.12)
-  local out = { string.format("\\definecolor{flocaption}{rgb}{%.3f,%.3f,%.3f}", c[1], c[2], c[3]) }
-  for _, cap in ipairs(list) do
-    if not shown or shown(cap) then
-      local x = g.mirror and g.pw - cap.x or cap.x
-      local anchor = cap.anchor or "north"
-      if g.mirror then anchor = anchor:gsub("east", "\0"):gsub("west", "east"):gsub("\0", "west") end
-      local opts = { "anchor=" .. anchor, "inner sep=0pt", "align=center" }
-      if cap.color then
-        opts[#opts + 1] = string.format("text={rgb,255:red,%d;green,%d;blue,%d}", math.floor(cap.color[1] * 255 + 0.5),
-          math.floor(cap.color[2] * 255 + 0.5), math.floor(cap.color[3] * 255 + 0.5))
-      else opts[#opts + 1] = "text=flocaption" end
-      if cap.scale then
-        opts[#opts + 1] = string.format("font=\\fontsize{10}{12}\\selectfont,scale=%.3f,transform shape", cap.scale)
-      else
-        opts[#opts + 1] = "font=\\fontsize{" .. (cap.small and "5.5}{6.5" or "6.5}{7.5") .. "}\\selectfont"
-      end
-      if cap.rotate and cap.rotate ~= 0 then opts[#opts + 1] = string.format("rotate=%.1f", g.mirror and -cap.rotate or cap.rotate) end
-      if cap.opacity then opts[#opts + 1] = string.format("text opacity=%.2f", cap.opacity) end
-      out[#out + 1] = string.format("\\node[%s] at (%.2f,%.2f) {%s};", table.concat(opts, ","), x, cap.y, cap.text)
-    end
-  end
-  tex.sprint(table.concat(out))
-end
-
--- the captions of the last page drawn, in layout cm, for florilegium-svg.lua, which has no TeX to set them,
--- and what grew on it (florilegium-grow.lua's counts)
-M.last_captions, M.last_stats = nil, nil
-
-local function grown_frame(g)
-  local key = string.format("%d %d %.3f %s %d %s %s %s %s", g.seed, g.spill, g.spilly, tostring(g.age), #g.marks, tostring(g.theme),
-    tostring(g.mirror), tostring(g.density), tostring(g.docseed))
-  if not recorded[key] then
-    g.anim = true
-    recorded = { [key] = require("florilegium-grow").page(g) }      -- keep only the latest garden
-  end
-  local r = recorded[key]
-  -- the last frame is the page: every event finished (r.total itself may round below)
-  local t = frame.k >= frame.n and math.huge or r.total * (frame.k - 1) / math.max(1, frame.n - 1)
-  ink.emit(r.rec, function(tag)
-    if tag.overlay and not frame.explain then return false end
-    local e = tag[1]
-    local p = (t - e.t0) / e.dur
-    return p >= tag[2] and (tag[3] == nil or p < tag[3])
+-- the vine for this page, drawn into the shipout picture; an error stops this page's vine,
+-- not the document
+function M.page(seed)
+  local ok, err = pcall(function()
+    local g = M.geometry()
+    g.seed, g.docseed, g.age, g.vine = seed, M.docseed, M.age, M.vine
+    vine.page(g)
   end)
-  M.captions(g, r.captions, function(cap) return t >= cap.event.t0 + cap.event.dur end)
-end
-
--- the theme (option theme=...): nil is flora; otherwise florilegium-theme-<name>.lua replaces
--- some of the primitives (florilegium-grow.lua). In the document, \florilegiumtheme leaves a
--- mark, so the theme changes from the page that the mark is on.
-M.theme = nil
--- the margin off and on. In the preamble \florilegiumoff and \florilegiumon set M.margin; in
--- the document they leave a mark, and the margin stops or starts with the page that the mark
--- is on (the last one on a page decides for it). \florilegiumhide leaves a mark that hides
--- its own page and no other; \florilegiumhide[1,3,5-8] names sheets, the PDF's pages counted
--- from 1 (M.sheet, which the shipout hook sets; nil without TeX), kept as ranges.
-M.margin, M.sheet = true, nil
-local hidden = {}
-function M.hide(list)
-  for item in (list .. ","):gmatch("%s*([^,]-)%s*,") do
-    local a, b = item:match("^(%d+)%s*%-%s*(%d+)$")
-    if not a then a = item:match("^(%d+)$") end
-    if a then hidden[#hidden + 1] = { tonumber(a), tonumber(b or a) }
-    elseif item ~= "" then
-      warn(string.format("\\florilegiumhide[%s] left out %s, which is not a page of the PDF (as 3) or a range of them (as 5-8)", list, item))
-    end
+  if not ok then
+    err = tostring(err)
+    tex.error(err:find("^florilegium") and err or "florilegium: " .. err)
   end
 end
--- the marks of a page that change a setting, taken out of the list: the theme, and whether
--- the page has a margin at all (second result: true for a page without one). A page without
--- a margin still has its marks read, so a theme that changes on it changes
-local function settings(list)
-  if M.theme == "" then M.theme = nil end   -- \florilegiumtheme{} in the preamble, as in the text
-  local rest, hide = {}, false
-  for _, m in ipairs(list) do
-    if m.kind == "theme" then M.theme = m.arg ~= "" and m.arg or nil
-    elseif m.kind == "margin" then M.margin = m.arg == "on"
-    elseif m.kind == "hide" then hide = true
-    else rest[#rest + 1] = m end
-  end
-  if M.sheet then
-    for _, r in ipairs(hidden) do
-      if M.sheet >= r[1] and M.sheet <= r[2] then hide = true break end
-    end
-  end
-  return rest, hide or not M.margin
-end
--- a page without its margin (\florilegiumoff, \florilegiumhide) still draws its headpieces,
--- since the text has kept their room: where they stand, without a vine (no branch can
--- reach one), as pale as the margin's would be
-local function bare_headpieces(list)
-  local g
-  for _, mk in ipairs(list) do
-    if mk.kind == "headpiece" then
-      g = g or M.geometry()
-      local old = ink.set_pale(0.85 * (1 - math.max(0, math.min(1, M.intensity))))
-      headpiece_at(mk, g, nil, true)
-      ink.set_pale(old)
-    end
-  end
-  if g then ink.flush() end
-end
-
--- how much is in the margin (options density and intensity, 0..1): density thins
--- the grown garden out, intensity < 1 paints the whole margin paler, as the
--- ghost layer is painted (1 - intensity of the way to the paper, at most 85%)
-M.density, M.intensity = 1, 1
-local function pale() return 0.85 * (1 - math.max(0, math.min(1, M.intensity))) end
-
--- the grown margin's plants are species (florilegium-species.lua), drawn by
--- florilegium-native.lua: loaded, and its version checked, with the first grown page
-local organs = false
-local function use_organs()
-  if organs then return end
-  require("florilegium-native")
-  M.check_versions()
-  organs = true
-end
-
--- the grown composition for this page; M.visitors = false (option novisitors)
--- leaves out the visitors, M.shells = false (option noshells) the shells on the ground. M.bleed (cm, florilegium-svg.lua's --bleed) lets the safety
--- clip reach past the paper's edge; LuaLaTeX never sets it
-M.visitors = true
-M.shells = true
-M.vine = nil                                  -- option vine=<variety>: theme vine's grape (florilegium-theme-vine.lua)
-M.bleed = 0
-function M.grown(seed, spill, spilly, box)
-  local g = M.geometry()
-  local hide
-  g.marks, hide = settings(M.page_marks(box))
-  if hide then bare_headpieces(g.marks) M.last_captions, M.last_stats = nil, nil return end
-  g.seed, g.spill, g.spilly, g.visitors, g.age, g.theme = seed, spill, spilly, M.visitors, M.age, usable_theme()
-  g.shells = M.shells
-  g.docseed = M.docseed
-  g.vine = M.vine
-  g.headpiece = function(mk, leaf) return headpiece_at(mk, g, leaf) end
-  if M.bleed > 0 then g.bleed = M.bleed end
-  if not M.theme or M.theme == "flora" then use_organs() end
-  if M.density < 1 then g.density = math.max(0.03, M.density) end
-  local old = ink.set_pale(pale())
-  if frame then grown_frame(g)
-  else
-    local r = require("florilegium-grow").page(g)
-    M.last_captions, M.last_stats = r and r.captions, r and r.stats
-    M.captions(g, r and r.captions)
-  end
-  M.head(g)
-  ink.set_pale(old)
-end
-M.grown = guarded(M.grown)
-
--- the authored composition for this page (intensity applies; density does not,
--- everything here is placed by hand)
-function M.authored(seed, box)
-  local list, hide = settings(M.page_marks(box))
-  if hide then bare_headpieces(list) M.last_captions, M.last_stats = nil, nil return end
-  local g = M.geometry()
-  g.seed, g.visitors, g.theme = seed, M.visitors, usable_theme()
-  if M.bleed > 0 then g.bleed = M.bleed end
-  -- the page's headpieces, with flora's leaflets on their vines (no branch reaches them)
-  for _, mk in ipairs(list) do if mk.kind == "headpiece" then headpiece_at(mk, g) end end
-  ink.flush()
-  local old = ink.set_pale(pale())
-  local r = require("florilegium-authored").page(g)
-  M.last_captions, M.last_stats = r and r.captions, r and r.stats
-  M.captions(g, r and r.captions)
-  M.head(g)
-  ink.set_pale(old)
-end
-M.authored = guarded(M.authored)
-
--- load the rest of the package now, so that a mixed set stops in the preamble and not
--- halfway through a page (florilegium-initial waits for the first initial; florilegium-svg
--- runs only outside TeX, where it loads this file and so is checked here too)
-for _, part in ipairs({ "grow", "authored", "figures", "theme-geometric", "theme-math", "theme-shells", "theme-vine", "tracery",
-  "shell" }) do
-  require("florilegium-" .. part)
-end
-M.check_versions()
 
 return M
