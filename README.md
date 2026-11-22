@@ -1,6 +1,6 @@
 # florilegium, with grapevines
 
-A grapevine that grows in the margin of a page. This is Jack Bracewell's fork of Kevin Raymond's
+A grapevine that grows in the margin of a page. This is a fork of Kevin Raymond's
 [florilegium](https://github.com/kevinraymond/florilegium), the LuaLaTeX package that grows
 Delft-blue flowers in the margin of a page. The fork keeps only one plant, and draws it properly:
 a spur-pruned grapevine trained up the margin as a vineyard trains it, in six varieties, through
@@ -140,7 +140,7 @@ asking how to make flowers like these in LaTeX: a margin of plants painted in Lu
 procedural layout, and in 2.0 plants sampled from genomes of botanical traits. Kevin made it with
 the assistance of AI (Claude).
 
-Jack Bracewell forked it to grow grapevines. The vine began as one more species among Kevin's
+I forked it to grow grapevines. The vine began as one more species among Kevin's
 plants, then became a theme of its own, then the whole package: everything that wasn't the vine
 was taken out. The fork was also written with Claude (Claude Code). The pictures are procedural
 code throughout, with no generative image models.
