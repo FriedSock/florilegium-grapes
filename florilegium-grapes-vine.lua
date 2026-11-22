@@ -186,8 +186,53 @@ end
 -- and a fringe of them along its edge
 local FLAT = { yaw = 0, pitch = 0, cup = 0, droop = 0, wave = 0, wph = 0, twist = 0 }
 local HAIR = { 0.95, 0.96, 0.92 }
-local DRY, SPOT = { 0.52, 0.38, 0.2 }, { 0.6, 0.5, 0.22 }
--- old (0..1): how worn the leaf is, its edges browned and its blade spotted
+-- rips in an old leaf's edge: now and then a tear cut into the outline (raw, the toothed edge
+-- in the leaf's plane). Each takes out a short stretch of the edge, so it opens as wide as a
+-- tooth or two, and runs crooked and ragged in toward the stalk to a point; none by the stalk
+local function tear(r, raw, old)
+  local n = floor(old * 2 * r.range(0.3, 1.2) + 0.4)
+  local at = {}
+  for _ = 1, n do
+    local i = 6 + floor(r.u() * (#raw - 12))
+    if abs(math.atan(raw[i][1], raw[i][2])) < 2.3 then at[#at + 1] = i end
+  end
+  table.sort(at, function(a, b) return a > b end)
+  local out, last = {}, nil
+  for i, q in ipairs(raw) do out[i] = q end
+  for _, i in ipairs(at) do
+    if not last or last - i > 10 then
+      local span = r.chance(0.5) and 1 or 2              -- edge points the tear takes out each side
+      local qa, qb, q = out[i - span], out[i + span], out[i]
+      local l = sqrt(q[1] * q[1] + q[2] * q[2])
+      local ux, uy = -q[1] / l, -q[2] / l                -- inward, toward the stalk
+      local d = l * r.range(0.12, 0.26) * old
+      local tx = (qa[1] + qb[1]) / 2 + d * ux + r.sym(0.25) * d * uy
+      local ty = (qa[2] + qb[2]) / 2 + d * uy - r.sym(0.25) * d * ux
+      -- each side of the tear, from the mouth to the point, stepping raggedly
+      local function side(p0)
+        local pts = {}
+        for k = 1, 3 do
+          local f = k / 4
+          local jx, jy = r.sym(0.18) * d, r.sym(0.18) * d
+          pts[k] = { lerp(p0[1], tx, f) + jx * 0.3, lerp(p0[2], ty, f) + jy * 0.3 }
+        end
+        return pts
+      end
+      local left, right = side(qa), side(qb)
+      local crack = { qa }
+      for _, p in ipairs(left) do crack[#crack + 1] = p end
+      crack[#crack + 1] = { tx, ty }
+      for k = #right, 1, -1 do crack[#crack + 1] = right[k] end
+      crack[#crack + 1] = qb
+      for _ = i - span, i + span do table.remove(out, i - span) end
+      for k = #crack, 1, -1 do table.insert(out, i - span, crack[k]) end
+      last = i - span
+    end
+  end
+  return out
+end
+-- old (0..1): how worn the leaf is: its edge torn here and there (its darker green is the
+-- caller's, in c)
 local function leaf(r, c, v, lobes, depth, lx, under, pose, rot, fuzz, old)
   pose, rot, fuzz, old = pose or FLAT, rot or 0, fuzz or 0, old or 0
   local tips, sd = leafplan(r, lobes, depth, v.basal)
@@ -219,8 +264,11 @@ local function leaf(r, c, v, lobes, depth, lx, under, pose, rot, fuzz, old)
     if nz < 0 then nx, ny, nz = -nx, -ny, -nz end
     return (nx * lfx + ny * lfy + nz * lpz) / l / sqrt(lpx * lpx + lpy * lpy + lpz * lpz)
   end
-  local edge = map(toothed(tips, sd, v.teeth))
+  local raw = toothed(tips, sd, v.teeth)
+  if old > 0.35 then raw = tear(r, raw, old) end
+  local edge = map(raw)
   ink.poly(edge, true) ink.fill(c)
+  ink.poly(edge, true) ink.clip()                -- all that is drawn on the blade stays on it
   -- each half lobe, lighter or darker by how its patch faces the light
   for k = 1, #tips do
     for _, toward in ipairs({ -1, 1 }) do
@@ -251,24 +299,6 @@ local function leaf(r, c, v, lobes, depth, lx, under, pose, rot, fuzz, old)
     end
     ink.stroke(HAIR, 0.1, 0.4)
   end
-  -- an old leaf: a few dry spots between the veins, and its edge browned, most at the lobes'
-  -- tips, which dry first
-  if old > 0.15 then
-    ink.poly(edge, true) ink.clip()
-    for _ = 1, floor(6 * old) do
-      local x, y = polar(tips, sd, r.range(-160, 160), r.range(0.3, 0.85))
-      ink.smooth(map(ink.blob(r, x, y, r.range(0.02, 0.05), r.range(0.02, 0.05), 0.4, 7)), true)
-      ink.fill(r.chance(0.5) and DRY or SPOT, r.range(0.35, 0.65) * old)
-    end
-    for _, t in ipairs(tips) do
-      local tx, ty = polar(tips, sd, t[1], 1)
-      local rr = (0.06 + 0.12 * old) * t[2] * r.range(0.6, 1.2)
-      ink.smooth(map(ink.blob(r, tx, ty, rr, rr, 0.35, 8)), true)
-      ink.fill(DRY, 0.55 * old)
-    end
-    ink.unclip()
-    ink.poly(edge, true) ink.stroke(DRY, 0.6, 0.5 * old)
-  end
   -- the main veins, each to its lobe's tip, and the side veins off them toward the edge
   local vc = under and mix(c, { 0.93, 0.95, 0.85 }, 0.6) or mix(c, C.vein, 0.55)
   for _, t in ipairs(tips) do
@@ -294,10 +324,10 @@ local function leaf(r, c, v, lobes, depth, lx, under, pose, rot, fuzz, old)
     end
   end
   ink.stroke(vc, under and 0.32 or 0.22, 0.75)
+  ink.unclip()
   ink.poly(edge, true) ink.stroke(scale(c, 0.6), 0.25, 0.8)
   -- a hairy leaf's edge is soft: a fringe of short hairs standing out from it
   if fuzz > 0.25 then
-    local raw = toothed(tips, sd, v.teeth)
     for i = 1, #raw, 2 do
       local x, y = raw[i][1], raw[i][2]
       local l = sqrt(x * x + y * y)
@@ -924,9 +954,10 @@ function M.page(g)
       if under then c = mix(c, { 0.66, 0.74, 0.5 }, 0.5) end
       -- its hairs: an underside's felt, the variety's; a young leaf near the tip downy on top
       local fuzz = under and v.hair or (it.young or 0) * (0.35 + 0.6 * v.hair)
-      -- the oldest leaves, low on the cane, wear as the season goes on: duller, yellower
+      -- the oldest leaves, low on the cane, wear as the season goes on: a darker, deeper green
+      -- (and torn here and there, in leaf)
       local old = (it.old or 0) * clamp((age - 0.45) / 0.4, 0, 1)
-      c = mix(c, { 0.48, 0.5, 0.24 }, 0.45 * old)
+      c = mix(c, scale(C.leafdark, 0.9), 0.5 * old)
       local pc = mix(C.petiole, C.red, white and 0.1 or 0.35)
       local n, j = it.node, it.j
       place(layer(it.z), 0, 0, 0, function()
