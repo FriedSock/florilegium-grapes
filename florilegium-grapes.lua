@@ -55,13 +55,14 @@ function M.auto_age(page, last) M.age = last > 1 and math.min(1, (page - 1) / (l
 
 -- the variety (option vine=...)
 M.vine = "pinot"
+M.pruning = "spur"
 
 -- the vine for this page, drawn into the shipout picture; an error stops this page's vine,
 -- not the document
 function M.page(seed)
   local ok, err = pcall(function()
     local g = M.geometry()
-    g.seed, g.docseed, g.age, g.vine = seed, M.docseed, M.age, M.vine
+    g.seed, g.docseed, g.age, g.vine, g.pruning = seed, M.docseed, M.age, M.vine, M.pruning
     vine.page(g)
   end)
   if not ok then

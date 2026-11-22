@@ -105,6 +105,7 @@ local function vine(variety, docseed)
 end
 -- the bunches drawn a little larger than life, as an illustrator enlarges the fruit
 local FRUIT = 1.3
+local BRAID_LOOSENESS = 0.6
 
 -- ---------------------------------------------------------------- the leaf
 -- The outline in polar form about the point where the stalk meets the blade (the origin),
@@ -349,13 +350,14 @@ end
 -- (an inverted pear, or a cylinder) is as wide as the variety's grapes need to cover it,
 -- closely for a compact bunch and with gaps for a loose one; in a compact bunch the grapes
 -- are drawn toward that outline, so it has no hollows between its clusters. A winged bunch
--- has a second, smaller panicle, the outer arm, splitting off the peduncle; in others that
--- arm is often a small bare spur. Grapes that collide are pushed apart. Grapes vary in size,
+-- has a second, smaller panicle, the outer arm, splitting off the peduncle. Grapes that
+-- collide are pushed apart. Grapes vary in size,
 -- a few stay small and green (shot berries), and as the bunch ripens they color one by one.
 -- Painted from the back: stalks, then grapes, nearer ones lighter.
 -- From the origin down -y, L long; rb the grape's half width, want how many grapes
-local function panicle(r, sp, L, B, ox, oy, oz, tilt, rb, want)
-  local H = 0.84 * L
+-- mm: cm on the page for a real mm (the stalks are drawn as thick as real ones)
+local function panicle(r, sp, L, B, ox, oy, oz, tilt, rb, want, mm)
+  local H = 0.78 * L
   local bx, bz = r.sym(0.15), r.sym(0.15)
   local ct, st = cos(tilt * RAD), sin(tilt * RAD)
   local function axis(t)                       -- the rachis, tilted, bending as it hangs
@@ -377,11 +379,15 @@ local function panicle(r, sp, L, B, ox, oy, oz, tilt, rb, want)
   for i = 1, 40 do mean = mean + shape((i - 0.5) / 40) / 40 end
   local R0 = want * rb * rb / (2 * H * cover * mean)
   local stalks = {}
-  local function stalk(x1, y1, z1, x2, y2, z2, w) stalks[#stalks + 1] = { x1, y1, z1, x2, y2, z2, w } end
+  -- a stalk from one point to another, d mm thick (as bp on the page)
+  local function stalk(x1, y1, z1, x2, y2, z2, d)
+    stalks[#stalks + 1] = { x1, y1, z1, x2, y2, z2, d * mm * 28.3465 }
+  end
+  -- the rachis, about 4 mm thick at its top, thinning to 1.5 mm at its tip
   local prev = { axis(0) }
   for i = 1, 12 do
     local q = { axis(i / 12) }
-    stalk(prev[1], prev[2], prev[3], q[1], q[2], q[3], 0.55)
+    stalk(prev[1], prev[2], prev[3], q[1], q[2], q[3], lerp(4, 1.5, (i - 0.5) / 12))
     prev = q
   end
   local phi = r.range(0, 360)
@@ -394,24 +400,38 @@ local function panicle(r, sp, L, B, ox, oy, oz, tilt, rb, want)
   end
   -- a spiral of branches off the rachis, the longest at the shoulders, each ending in a
   -- small cluster of grapes on short pedicels: a sphere of them about the branch's tip
-  local nb = clamp(floor(want / 7), 6, 22)
-  local sum, shares = 0, {}
-  for i = 1, nb do shares[i] = shape((i - 0.5) / nb) * r.range(0.7, 1.3) sum = sum + shares[i] end
+  -- how many and where, after Shavrukov, Dry & Thomas (2004): 20 to 22 branches (nodes) on a
+  -- tight bunch's rachis, 33 to 38 on a loose one's, each carrying a group of 6 to 8 flowers;
+  -- the internodes between them longest at the top (a pair about 20 mm there, 5 mm by the
+  -- middle), long and short by turns
+  local nb = clamp(floor(want / ({ 3.5, 4.5, 5.5 })[sp.compact] + 0.5), 8, 38)
+  local pos, acc = {}, 0
   for i = 1, nb do
-    local t = clamp((i - 0.5 + r.sym(0.3)) / nb, 0, 1)
+    local len = (0.25 + 0.75 * math.exp(-(i - 1) / 2.6)) * (i % 2 == 1 and 1.35 or 0.65) * r.range(0.85, 1.15)
+    acc = acc + len
+    pos[i] = acc
+  end
+  local sum, shares = 0, {}
+  for i = 1, nb do shares[i] = shape(pos[i] / acc) * r.range(0.7, 1.3) sum = sum + shares[i] end
+  for i = 1, nb do
+    local t = clamp(pos[i] / acc * 0.97, 0, 1)
     phi = phi + 137.508 + r.sym(15)
     local c, s_ = cos(phi * RAD), sin(phi * RAD)
     local m = max(1, floor(want * shares[i] / sum + 0.5))
     local rs = rb * sqrt(1.15 * m / 4)                     -- the cluster's sphere
     local R = max(0, R0 * shape(t) - rs + rb) * r.range(0.85, 1.1)
     local x0, y0, z0 = axis(t)
-    -- the branch arches down under the weight it carries, more toward its tip
-    local mx, my, mz = x0 + c * 0.55 * R, y0 - 0.32 * R, z0 + s_ * 0.55 * R
-    local tx, ty, tz = x0 + c * R, y0 - 0.85 * R - 0.15 * rs, z0 + s_ * R
-    stalk(x0, y0, z0, mx, my, mz, 0.4)
-    stalk(mx, my, mz, tx, ty, tz, 0.34)
-    -- its cluster hangs below the tip, drawn out downward, each grape on its pedicel
-    local cx, cy, cz = tx, ty - 0.95 * rs, tz
+    -- the branch is stiff: about 2 mm thick, it stands out from the rachis at an angle from
+    -- the straight down, nearly level at the shoulders (68 degrees) and steeper lower down (38),
+    -- bowing only a little. Real ones are long: the first 4 to 5 cm, a third of the rachis
+    local ang = lerp(68, 38, t) * RAD
+    local drop = R / math.tan(ang)
+    local mx, my, mz = x0 + c * 0.5 * R, y0 - 0.4 * drop, z0 + s_ * 0.5 * R
+    local tx, ty, tz = x0 + c * R, y0 - drop, z0 + s_ * R
+    stalk(x0, y0, z0, mx, my, mz, 2.0)
+    stalk(mx, my, mz, tx, ty, tz, 1.5)
+    -- its cluster about the tip, a little below it, each grape on its pedicel
+    local cx, cy, cz = tx, ty - 0.45 * rs, tz
     for k = 1, m do
       local zz = 1 - 2 * (k - 0.5) / m
       local rr2 = sqrt(max(0, 1 - zz * zz))
@@ -419,8 +439,8 @@ local function panicle(r, sp, L, B, ox, oy, oz, tilt, rb, want)
       local ux, uy, uz = rr2 * cos(a * RAD), zz, rr2 * sin(a * RAD)
       local gx, gy, gz = cx + ux * rs * 0.9, cy + uy * rs * 1.2, cz + uz * rs * 0.9
       local px, py, pz = lerp(tx, gx, 0.45), lerp(ty, gy, 0.45) + 0.1 * rb, lerp(tz, gz, 0.45)
-      stalk(tx, ty, tz, px, py, pz, 0.22)
-      stalk(px, py, pz, gx, gy, gz, 0.18)
+      stalk(tx, ty, tz, px, py, pz, 1.1)                -- the pedicel, about 1 mm thick
+      stalk(px, py, pz, gx, gy, gz, 0.9)
       grape(gx, gy, gz, px, py, pz, c, s_, r.chance(0.04) and r.range(0.45, 0.6) or r.range(0.88, 1.08))
       -- it hangs from its pedicel: its long axis that way, and down
       local g = B[#B]
@@ -454,16 +474,20 @@ local function bunch(r, sp, L, c, bl, lx, ripe, rb, want, v)
   local bloom, alt, vary, spots = v.bloom or 0.14, v.alt, v.vary or 0, v.spots
   local dark = sp.berrytone == "dark"
   local B = {}
-  local ped = 0.15 * L
+  -- the peduncle, bare from the node to the first branch: 16 to 17 mm on a tight bunch of
+  -- 8 to 12 cm (Shavrukov et al. 2004), a little under a fifth of it; 5 to 6 mm thick
+  local ped = 0.18 * L * r.range(0.75, 1.35)
+  local mm = 2 * rb / v.mm                       -- cm on the page for a real mm
   local stalks = {}
   local function add(list) for _, s_ in ipairs(list) do stalks[#stalks + 1] = s_ end end
   local tilt = r.sym(10)
-  local main = panicle(r, sp, L, B, 0, -ped, 0, tilt, rb, want)
+  local main = panicle(r, sp, L, B, 0, -ped, 0, tilt, rb, want, mm)
   add(main)
   local arm = r.chance(0.5) and 1 or -1
   local wx, wy = arm * 0.22 * L, -ped * 0.55
   if sp.bunch == "winged" then
-    add((panicle(r, sp, 0.45 * L, B, wx, wy - 0.05 * L, r.sym(0.1) * L, arm * r.range(15, 30), rb, floor(0.3 * want))))
+    add((panicle(r, sp, 0.45 * L, B, wx, wy - 0.05 * L, r.sym(0.1) * L, arm * r.range(15, 30), rb, floor(0.3 * want),
+      mm)))
   end
   -- push apart grapes that collide, as they press in a tight bunch
   local press = ({ 1.0, 0.95, 0.9 })[sp.compact]
@@ -482,14 +506,13 @@ local function bunch(r, sp, L, c, bl, lx, ripe, rb, want, v)
       end
     end
   end
-  -- the stalks: the peduncle from the node, a spur or the wing's arm, then the bunch's own
+  -- the stalks: the peduncle from the node, the wing's arm, then the bunch's own
   local sc = mix(C.shoot, C.cane, 0.45)
-  ink.moveto(0, 0) ink.curveto(r.sym(0.03) * L, -0.05 * L, 0, -0.1 * L, 0, -ped) ink.stroke(sc, 1.0, 1)
-  ink.moveto(0, -0.55 * ped)
-  if sp.bunch == "winged" then ink.lineto(wx, wy - 0.05 * L) else
-    ink.curveto(arm * 0.06 * L, -0.5 * ped, arm * 0.1 * L, -0.4 * ped, arm * 0.11 * L, -0.25 * ped)
+  local BP = mm * 28.3465                        -- bp on the page for a real mm
+  ink.moveto(0, 0) ink.curveto(r.sym(0.03) * L, -0.3 * ped, 0, -0.65 * ped, 0, -ped) ink.stroke(sc, 5.5 * BP, 1)
+  if sp.bunch == "winged" then
+    ink.moveto(0, -0.55 * ped) ink.lineto(wx, wy - 0.05 * L) ink.stroke(sc, 3 * BP, 1)
   end
-  ink.stroke(sc, 0.6, 1)
   table.sort(stalks, function(a, b) return a[3] + a[6] < b[3] + b[6] end)
   for _, s_ in ipairs(stalks) do
     if not s_.gone then ink.moveto(s_[1], s_[2]) ink.lineto(s_[4], s_[5]) ink.stroke(sc, s_[7], 0.95) end
@@ -689,6 +712,136 @@ local function band(pts, w0, w1, c)
   ink.smooth(shape, true) ink.stroke(scale(c, 0.5), 0.25, 0.8)
   return L, R, s, total
 end
+local function braid(r, pts, S)
+  local n = #pts
+  local s, total = ink.arclen(pts)
+  local function at(d)
+    local i = 1
+    while i < n - 1 and s[i + 1] < d do i = i + 1 end
+    local t = clamp((d - s[i]) / max(1e-9, s[i + 1] - s[i]), 0, 1)
+    local tx, ty = pts[i + 1][1] - pts[i][1], pts[i + 1][2] - pts[i][2]
+    local l = max(1e-9, sqrt(tx * tx + ty * ty))
+    return lerp(pts[i][1], pts[i + 1][1], t), lerp(pts[i][2], pts[i + 1][2], t), -ty / l, tx / l
+  end
+  local canes = {}
+  local L = BRAID_LOOSENESS
+  for k = 1, floor(r.range(lerp(6, 2, L), lerp(8, 4, L))) do
+    local w = r.range(1.8, 4.2) * S
+    local base = r.sym(lerp(1.5, 5, L) * S)
+    local A = r.range(1, 2.5) * lerp(1, 2, L) * S
+    local P, ph, bias = r.range(30, 60) * S, r.range(0, 2 * pi), r.sym(0.3)
+    local nodes, d = {}, 0
+    while true do
+      local x, y, nx, ny = at(d)
+      local o = base + A * sin(ph) + r.sym(0.5 * S)
+      nodes[#nodes + 1] = { x + nx * o, y + ny * o, w * r.range(0.8, 1.15), clamp(cos(ph) + bias, -1, 1), o }
+      if d >= total then break end
+      local ds = r.range(4, 9) * S
+      d = min(total, d + ds)
+      ph = ph + 2 * pi * ds / P * r.range(0.6, 1.4)
+    end
+    canes[k] = { nodes = nodes, z = bias }
+  end
+  table.sort(canes, function(a, b) return a.z < b.z end)
+  return canes
+end
+local function drawbraid(r, canes)
+  local function side(nodes, i0, i1, k, pad)
+    local out = {}
+    for i = i0, i1 do
+      local p, a, b = nodes[i], nodes[max(1, i - 1)], nodes[min(#nodes, i + 1)]
+      local tx, ty = b[1] - a[1], b[2] - a[2]
+      local l = max(1e-9, sqrt(tx * tx + ty * ty))
+      local o = k * p[3] / 2 + (pad or 0) * k
+      out[#out + 1] = { p[1] - ty / l * o, p[2] + tx / l * o }
+    end
+    return out
+  end
+  local function run(cn, i0, i1)
+    local nodes = cn.nodes
+    local L, R = side(nodes, i0, i1, 1), side(nodes, i0, i1, -1)
+    local shape = {}
+    for i = 1, #L do shape[#shape + 1] = L[i] end
+    for i = #R, 1, -1 do shape[#shape + 1] = R[i] end
+    ink.poly(shape, true) ink.fill(C.bark)
+    for k, st in ipairs(cn.strips) do
+      local strip = {}
+      for i = i0, i1 do
+        local p, a, b = nodes[i], nodes[max(1, i - 1)], nodes[min(#nodes, i + 1)]
+        local tx, ty = b[1] - a[1], b[2] - a[2]
+        local l = max(1e-9, sqrt(tx * tx + ty * ty))
+        local o = clamp(st[1] + 0.45 * sin(cn.s[i] * st[2] + st[3]), -0.88, 0.88) * p[3] / 2
+        strip[#strip + 1] = { p[1] - ty / l * o, p[2] + tx / l * o }
+      end
+      ink.smooth(strip, false)
+      if k % 2 == 0 then ink.stroke(C.barklight, st[4], 0.55) else ink.stroke(C.barkdark, st[4], 0.7) end
+    end
+    ink.poly(L, false) ink.poly(R, false) ink.stroke(C.barkdark, 0.35, 0.8)
+  end
+  for _, cn in ipairs(canes) do
+    cn.s = ink.arclen(cn.nodes)
+    cn.strips = {}
+    for k = 1, 6 do
+      cn.strips[k] = { r.sym(0.85), r.range(1.2, 3.8), r.range(0, 2 * pi), k % 2 == 0 and r.range(0.3, 0.6) or r.range(0.35, 0.8) }
+    end
+    run(cn, 1, #cn.nodes)
+  end
+  local function at(cn, x, k)
+    local nd = cn.nodes
+    for j = 1, #nd - 1 do
+      if nd[j][1] <= x and nd[j + 1][1] >= x then
+        return lerp(nd[j][k], nd[j + 1][k], (x - nd[j][1]) / max(1e-9, nd[j + 1][1] - nd[j][1]))
+      end
+    end
+  end
+  local function outline(nd, i0, i1)
+    local L, R = side(nd, i0, i1, 1, 0.012), side(nd, i0, i1, -1, 0.012)
+    for i = #R, 1, -1 do L[#L + 1] = R[i] end
+    return L
+  end
+  local function span(nd, lo, hi)
+    local i0, i1 = 1, #nd
+    while i0 < #nd and nd[i0 + 1][1] < lo do i0 = i0 + 1 end
+    while i1 > 1 and nd[i1 - 1][1] > hi do i1 = i1 - 1 end
+    return i0, i1
+  end
+  for ia = 1, #canes - 1 do
+    local A = canes[ia]
+    for ib = ia + 1, #canes do
+      local B = canes[ib].nodes
+      local function over(j)
+        local p, q = B[j], B[j + 1]
+        local xm = (p[1] + q[1]) / 2
+        local y, w = at(A, xm, 2), at(A, xm, 3)
+        return y and abs(y - (p[2] + q[2]) / 2) < (w + (p[3] + q[3]) / 2) / 2
+      end
+      local i = 1
+      while i < #B do
+        if over(i) then
+          local j, dz = i, 0
+          while j < #B and over(j) do
+            dz = dz + at(A, (B[j][1] + B[j + 1][1]) / 2, 4) - (B[j][4] + B[j + 1][4]) / 2
+            j = j + 1
+          end
+          if dz > 0 then
+            local lo, hi = B[i][1], B[j][1]
+            ink.poly(outline(B, i, j), true) ink.clip()
+            for ic = ib + 1, #canes do
+              ink.poly({ { lo - 1, -50 }, { hi + 1, -50 }, { hi + 1, 50 }, { lo - 1, 50 } }, true)
+              ink.poly(outline(canes[ic].nodes, span(canes[ic].nodes, lo, hi)), true)
+              ink.clip(true)
+            end
+            run(A, span(A.nodes, lo, hi))
+            for _ = ib, #canes do ink.unclip() end
+          end
+          i = j
+        else
+          i = i + 1
+        end
+      end
+    end
+  end
+end
 
 -- ---------------------------------------------------------------- the page
 -- The vine as a vineyard trains it, spur-pruned on a vertical shoot positioned trellis, seen
@@ -727,8 +880,6 @@ function M.page(g)
   local cw, H = x1 - x0, yt - yg
   local size = clamp(cw / 5.5, 0.75, 1.15)
   local S = 1.2 * size / 11                       -- cm on the page for a real cm: a leaf's midrib is 11 cm
-  local yc = yg + 0.3 * H                         -- the fruiting wire
-  local wires = { yc + 0.3 * (yt - yc), yc + 0.58 * (yt - yc), yc + 0.84 * (yt - yc) }
   local counts = { shoot = 0, leaf = 0, bunch = 0, tendril = 0, grape = 0 }
 
   local function place(layer, x, y, a, fn)
@@ -740,164 +891,287 @@ function M.page(g)
   local function layer(z) return 10 + floor((clamp(z, -1, 1) + 1) * 20) end
   local MID = layer(0)
 
-  -- 1. the trunk and the cordon
-  local xt = x0 + cw * layout.range(0.38, 0.52)
-  local trunk = {}
-  local ph = layout.range(0, 360)
-  for i = 0, 16 do
-    local t = i / 16
-    trunk[#trunk + 1] = { xt + 0.25 * size * sin((t * 300 + ph) * RAD) + layout.sym(0.05), lerp(yg, yc - 0.3, t) }
-  end
-  local top = trunk[#trunk]
-  local arms = {}
-  for _, side in ipairs({ -1, 1 }) do
-    local reach = side < 0 and top[1] - x0 - 0.1 or x1 - top[1] - 0.1
-    if reach > 0.8 then
-      -- from inside the head, curving out and up onto the wire, then along it, knuckled
-      local y0 = top[2] - 0.55 * size
-      local pts = { { top[1] - side * 0.1 * size, y0 } }
-      local sag = layout.range(0.03, 0.1)
-      for i = 1, 18 do
-        local t = i / 18
-        local u = min(1, t * 2.6)
-        pts[#pts + 1] = { top[1] + side * reach * t, lerp(y0, yc, 1 - (1 - u) ^ 2.2) - sag * sin(t * 180 * RAD)
-          + 0.05 * size * sin((t * 900 + ph) * RAD) }
-      end
-      arms[#arms + 1] = { pts = pts, side = side }
-    end
-  end
-  local tw = 1.1 * size
-  place(MID - 2, 0, 0, 0, function()
-    local r = rng.fork()
-    for _, arm in ipairs(arms) do wood(r, arm.pts, 0.8 * size, 0.38 * size) end
-    wood(r, trunk, tw, 0.95 * size)
-  end)
-  -- the wires, the fruiting wire under the cordon and the catch wires above it
-  place(MID + 1, 0, 0, 0, function()
-    for _, y in ipairs({ yc - 0.08, wires[1], wires[2], wires[3] }) do
-      ink.moveto(col[1] - 0.3, y) ink.lineto(col[3] - 0.05, y + 0.01)
-    end
-    ink.stroke({ 0.52, 0.53, 0.55 }, 0.4, 0.85)
-  end)
-
-  -- 2. the spurs, and from each bud a shoot
-  local items = {}
+  local items, wires, hung = {}, {}, {}
   local shootc = mix(C.shoot, C.cane, wooded)
-  for _, arm in ipairs(arms) do
-    local s, total = ink.arclen(arm.pts)
-    local at, i = layout.range(0.9, 1.4) * size, 1
-    while at < total - 0.15 do
-      while i < #arm.pts and s[i] < at do i = i + 1 end
-      local q = arm.pts[i]
-      local sa = 90 + layout.sym(25)
-      local sl = layout.range(0.5, 0.8) * size
-      local ex, ey = q[1] + sl * cos(sa * RAD), q[2] + sl * sin(sa * RAD)
-      local stub = layout.chance(0.5) and layout.sym(1) or nil
-      items[#items + 1] = { kind = "spur", q = q, e = { ex, ey }, a = sa, stub = stub, z = 0 }
-      -- the spur's two buds: a shoot from each (now and then one is blind)
-      for b = 1, 2 do
-        if b == 1 or layout.chance(0.85) then
-          local f = b == 1 and 0.45 or 0.92
-          local bx, by = lerp(q[1], ex, f), lerp(q[2], ey, f)
-          local lean = layout.sym(3) + (b == 1 and 4 or -4) * (cos(sa * RAD) >= 0 and 1 or -1)
-          local hedge = yt + layout.range(-0.3, 0.25)
-          local flop = layout.chance(0.3)
-          local pts, x, y, a = { { bx, by } }, bx, by, 90 + lean
-          local target = (hedge - by) * grown
-          local len, sway = 0, layout.range(0, 360)
-          while len < target do
-            a = 90 + lean + 4 * sin((len * 60 + sway) * RAD)
-            x, y = x + 0.12 * cos(a * RAD), y + 0.12 * sin(a * RAD)
-            len = len + 0.12
-            pts[#pts + 1] = { clamp(x, col[1] - 0.1, col[3] + 0.1), y }
-          end
-          if flop and grown >= 1 then                     -- over the top wire and down
-            local fa, side = a, layout.chance(0.5) and 1 or -1
-            for _ = 1, floor(layout.range(6, 12)) do
-              fa = fa + side * 14
-              x, y = x + 0.12 * cos(fa * RAD), y + 0.12 * sin(fa * RAD)
-              pts[#pts + 1] = { x, y }
-            end
-          end
-          counts.shoot = counts.shoot + 1
-          -- a shoot is about 1 cm thick at its base
-          items[#items + 1] = { kind = "shoot", pts = pts, z = 0, w0 = (b == 1 and 1.05 or 0.95) * S }
-          -- the nodes: a leaf at each, alternately left and right, its bud in the axil;
-          -- bunches low, tendrils higher, now and then a lateral
-          local ss, tot = ink.arclen(pts)
-          local nat, node, side, j = layout.range(0.15, 0.25) * size, 0, layout.chance(0.5) and 1 or -1, 1
-          while nat < tot - 0.1 do
-            while j < #pts and ss[j] < nat do j = j + 1 end
-            local p, pa_, pb = pts[j], pts[max(1, j - 1)], pts[min(#pts, j + 1)]
-            local ta = deg(pb[1] - pa_[1], pb[2] - pa_[2])
-            node, side = node + 1, -side
-            local zone = p[2] < yc + 0.22 * (yt - yc)
-            local u = nat / tot
-            items[#items + 1] = { kind = "node", p = p, ta = ta, side = side, z = 0.02 }
-            if not zone then                                  -- the fruit zone's leaves are plucked
-              -- the oldest leaves, low on the cane, are the largest, fully grown; they shrink
-              -- toward the young tip, and the first one or two are a little small
-              local L = 1.2 * size * v.leaf * (node <= 2 and 0.8 or 1) * (1.25 - 0.75 * u ^ 1.1)
-                * layout.range(0.88, 1.08)
-              local pa = ta - side * layout.range(55, 85)
-              local px, py = dir(pa)
-              local bx2, by2 = 0.55 * px, 0.55 * py - 0.6
-              local bl = sqrt(bx2 * bx2 + by2 * by2)
-              local pl = layout.range(0.75, 1.05) * L
-              items[#items + 1] = { kind = "leaf", node = p, j = { p[1] + pl * px, p[2] + pl * py },
-                axis = deg(bx2 / bl, by2 / bl) + layout.sym(18), L = L, z = layout.sym(1),
-                turn = fall * (layout.u() < 0.75 and 1 or 0.35) * layout.range(0.5, 1), tint = layout.sym(1),
-                young = clamp((u - 0.6) / 0.4, 0, 1), old = clamp(1.15 - u / 0.7, 0, 1) }
-            end
-            local oa = ta + side * layout.range(40, 65)
-            local fruit = node == 3 or node == 4 and layout.chance(0.6) or node == 5 and layout.chance(0.1)
-            if node >= 3 and node <= 5 and age >= 0.3 and fruit then
-              -- the bunch at its real size, on the leaf's scale (a midrib about 11 cm long)
-              local young = age < 0.45
-              local Lb = FRUIT * v.cm * S * layout.range(0.85, 1.1) * (young and 0.5 or 1)
-              local ox, oy = dir(oa)
-              local tx, ty = p[1] + 0.18 * ox, p[2] + 0.18 * oy
-              -- thinned, as a grower thins them, where it would crowd one already hanging
-              local crowded = false
-              for _, o in ipairs(items) do
-                if o.kind == "bunch" and abs(o.t[1] - tx) < 0.28 * (o.L + Lb)
-                  and min(o.t[2], ty) - max(o.t[2] - o.L, ty - Lb) > 0.35 * min(o.L, Lb) then crowded = true break end
-              end
-              if not crowded then
-                items[#items + 1] = { kind = "bunch", node = p, t = { tx, ty }, L = Lb, z = layout.range(-0.5, 0.9),
-                  rb = FRUIT * v.mm / 20 * S * (young and 0.6 or 1) }
-              end
-            elseif node >= 6 and (node - 6) % 3 < 2 then
-              local wy
-              for _, w in ipairs(wires) do if abs(w - p[2]) < 0.55 * size then wy = w end end
-              items[#items + 1] = { kind = "tendril", node = p, a = oa, L = layout.range(0.7, 1.1) * size, wire = wy,
-                z = layout.sym(0.6) }
-            end
-            if node >= 4 and not zone and layout.chance(0.18) then  -- a lateral from the axil
-              local la = ta - side * layout.range(30, 45)
-              local ll = layout.range(0.6, 1.1) * size
-              local lp = { { p[1], p[2] } }
-              for k = 1, 6 do
-                lp[#lp + 1] = { p[1] + ll * k / 6 * cos((la + side * 4 * k) * RAD), p[2] + ll * k / 6 * sin((la + side * 4 * k) * RAD) }
-              end
-              items[#items + 1] = { kind = "shoot", pts = lp, z = layout.sym(0.5), w0 = 0.05 * size }
-              for k = 1, 2 do
-                local q2 = lp[2 + 2 * k]
-                local pa2 = la + (k == 1 and side or -side) * 60
-                local px2, py2 = dir(pa2)
-                local L2 = 0.55 * size * v.leaf * layout.range(0.85, 1.1)
-                items[#items + 1] = { kind = "leaf", node = q2, j = { q2[1] + 0.8 * L2 * px2, q2[2] + 0.8 * L2 * py2 },
-                  axis = pa2 - 20 * (pa2 > 90 and -1 or 1), L = L2, z = layout.sym(1), turn = fall * layout.u(), tint = layout.sym(1),
-                  young = 0.7 }
-              end
-            end
-            nat = nat + layout.range(1.0, 1.35) * size
-          end
+  -- a shoot along pts, w0 thick at its base (a real one is about 1 cm): at its nodes, a leaf at
+  -- each, alternately left and right, its bud in the axil; bunches low, tendrils higher, now
+  -- and then a lateral
+  local function shoot(pts, w0, plucked)
+    counts.shoot = counts.shoot + 1
+    items[#items + 1] = { kind = "shoot", pts = pts, z = 0, w0 = w0 }
+    local ss, tot = ink.arclen(pts)
+    local nat, node, side, j = layout.range(0.15, 0.25) * size, 0, layout.chance(0.5) and 1 or -1, 1
+    local nodes = {}
+    while nat < tot - 0.1 do
+      nodes[#nodes + 1] = nat
+      nat = nat + layout.range(1.0, 1.35) * size
+    end
+    local function yat(a)
+      local i = 1
+      while i < #pts and ss[i] < a do i = i + 1 end
+      return pts[i][2]
+    end
+    local fruit, near = {}, {}
+    for _, h in ipairs(hung) do near[#near + 1] = h end
+    for _ = 1, layout.chance(0.55) and 2 or 1 do
+      local ws, sum, last = {}, 0, min(5, #nodes)
+      for n = 3, last do
+        local w = fruit[n] and 0 or 1
+        local y = yat(nodes[n])
+        for _, h in ipairs(near) do w = w * (1 - math.exp(-((y - h) / (0.6 * size)) ^ 2)) end
+        ws[n], sum = w, sum + w
+      end
+      if sum <= 0 then break end
+      local pick, n = layout.u() * (sum + 0.1), 3
+      if pick >= sum then break end
+      while n < last and pick > ws[n] do pick, n = pick - ws[n], n + 1 end
+      if fruit[n] then break end
+      fruit[n] = true
+      near[#near + 1] = yat(nodes[n])
+    end
+    for _, at in ipairs(nodes) do
+      nat = at
+      while j < #pts and ss[j] < nat do j = j + 1 end
+      local p, pa_, pb = pts[j], pts[max(1, j - 1)], pts[min(#pts, j + 1)]
+      local ta = deg(pb[1] - pa_[1], pb[2] - pa_[2])
+      node, side = node + 1, -side
+      local zone = plucked and plucked(p[2])
+      local u = nat / tot
+      items[#items + 1] = { kind = "node", p = p, ta = ta, side = side, z = 0.02 }
+      if not zone then                                  -- the fruit zone's leaves are plucked
+        -- the oldest leaves, low on the cane, are the largest, fully grown; they shrink
+        -- toward the young tip, and the first one or two are a little small
+        local L = 1.2 * size * v.leaf * (node <= 2 and 0.8 or 1) * (1.25 - 0.75 * u ^ 1.1)
+          * layout.range(0.88, 1.08)
+        local pa = ta - side * layout.range(55, 85)
+        local px, py = dir(pa)
+        local bx2, by2 = 0.55 * px, 0.55 * py - 0.6
+        local bl = sqrt(bx2 * bx2 + by2 * by2)
+        local pl = layout.range(0.75, 1.05) * L
+        items[#items + 1] = { kind = "leaf", node = p, j = { p[1] + pl * px, p[2] + pl * py },
+          axis = deg(bx2 / bl, by2 / bl) + layout.sym(18), L = L, z = layout.sym(1),
+          turn = fall * (layout.u() < 0.75 and 1 or 0.35) * layout.range(0.5, 1), tint = layout.sym(1),
+          young = clamp((u - 0.6) / 0.4, 0, 1), old = clamp(1.15 - u / 0.7, 0, 1) }
+      end
+      local oa = ta + side * layout.range(40, 65)
+      if fruit[node] and age >= 0.3 then
+        -- the bunch at its real size, on the leaf's scale (a midrib about 11 cm long)
+        local young = age < 0.45
+        local Lb = FRUIT * v.cm * S * layout.range(0.85, 1.1) * (young and 0.5 or 1)
+        local ox, oy = dir(oa)
+        local tx, ty = p[1] + 0.18 * ox, p[2] + 0.18 * oy
+        -- thinned, as a grower thins them, where it would crowd one already hanging
+        local crowded = false
+        for _, o in ipairs(items) do
+          if o.kind == "bunch" and abs(o.t[1] - tx) < 0.2 * (o.L + Lb)
+            and min(o.t[2], ty) - max(o.t[2] - o.L, ty - Lb) > 0.3 * min(o.L, Lb) then crowded = true break end
+        end
+        if not crowded then
+          hung[#hung + 1] = p[2]
+          items[#items + 1] = { kind = "bunch", node = p, t = { tx, ty }, L = Lb, z = layout.range(-0.5, 0.9),
+            rb = FRUIT * v.mm / 20 * S * (young and 0.6 or 1) }
+        end
+      elseif node >= 6 and (node - 6) % 3 < 2 then
+        local wy
+        for _, w in ipairs(wires) do if abs(w - p[2]) < 0.55 * size then wy = w end end
+        items[#items + 1] = { kind = "tendril", node = p, a = oa, L = layout.range(0.7, 1.1) * size, wire = wy,
+          z = layout.sym(0.6) }
+      end
+      if node >= 4 and not zone and layout.chance(0.18) then  -- a lateral from the axil
+        local la = ta - side * layout.range(30, 45)
+        local ll = layout.range(0.6, 1.1) * size
+        local lp = { { p[1], p[2] } }
+        for k = 1, 6 do
+          lp[#lp + 1] = { p[1] + ll * k / 6 * cos((la + side * 4 * k) * RAD), p[2] + ll * k / 6 * sin((la + side * 4 * k) * RAD) }
+        end
+        items[#items + 1] = { kind = "shoot", pts = lp, z = layout.sym(0.5), w0 = 0.05 * size }
+        for k = 1, 2 do
+          local q2 = lp[2 + 2 * k]
+          local pa2 = la + (k == 1 and side or -side) * 60
+          local px2, py2 = dir(pa2)
+          local L2 = 0.55 * size * v.leaf * layout.range(0.85, 1.1)
+          items[#items + 1] = { kind = "leaf", node = q2, j = { q2[1] + 0.8 * L2 * px2, q2[2] + 0.8 * L2 * py2 },
+            axis = pa2 - 20 * (pa2 > 90 and -1 or 1), L = L2, z = layout.sym(1), turn = fall * layout.u(), tint = layout.sym(1),
+            young = 0.7 }
         end
       end
-      at = at + layout.range(2.2, 2.9) * size
     end
   end
+
+  local train = {}
+  function train.spur()
+    local yc = yg + 0.3 * H                         -- the fruiting wire
+    wires = { yc + 0.3 * (yt - yc), yc + 0.58 * (yt - yc), yc + 0.84 * (yt - yc) }
+    local function plucked(y) return y < yc + 0.22 * (yt - yc) end
+    -- 1. the trunk and the cordon
+    local xt = x0 + cw * layout.range(0.38, 0.52)
+    local trunk = {}
+    local ph = layout.range(0, 360)
+    for i = 0, 16 do
+      local t = i / 16
+      trunk[#trunk + 1] = { xt + 0.25 * size * sin((t * 300 + ph) * RAD) + layout.sym(0.05), lerp(yg, yc - 0.3, t) }
+    end
+    local top = trunk[#trunk]
+    local arms = {}
+    for _, side in ipairs({ -1, 1 }) do
+      local reach = side < 0 and top[1] - x0 - 0.1 or x1 - top[1] - 0.1
+      if reach > 0.8 then
+        -- from inside the head, curving out and up onto the wire, then along it, knuckled
+        local y0 = top[2] - 0.55 * size
+        local pts = { { top[1] - side * 0.1 * size, y0 } }
+        local sag = layout.range(0.03, 0.1)
+        for i = 1, 18 do
+          local t = i / 18
+          local u = min(1, t * 2.6)
+          pts[#pts + 1] = { top[1] + side * reach * t, lerp(y0, yc, 1 - (1 - u) ^ 2.2) - sag * sin(t * 180 * RAD)
+            + 0.05 * size * sin((t * 900 + ph) * RAD) }
+        end
+        arms[#arms + 1] = { pts = pts, side = side }
+      end
+    end
+    local tw = 1.1 * size
+    place(MID - 2, 0, 0, 0, function()
+      local r = rng.fork()
+      for _, arm in ipairs(arms) do wood(r, arm.pts, 0.8 * size, 0.38 * size) end
+      wood(r, trunk, tw, 0.95 * size)
+    end)
+    -- the wires, the fruiting wire under the cordon and the catch wires above it
+    place(MID + 1, 0, 0, 0, function()
+      for _, y in ipairs({ yc - 0.08, wires[1], wires[2], wires[3] }) do
+        ink.moveto(col[1] - 0.3, y) ink.lineto(col[3] - 0.05, y + 0.01)
+      end
+      ink.stroke({ 0.52, 0.53, 0.55 }, 0.4, 0.85)
+    end)
+
+    -- 2. the spurs, and from each bud a shoot
+    for _, arm in ipairs(arms) do
+      local s, total = ink.arclen(arm.pts)
+      local at, i = layout.range(0.9, 1.4) * size, 1
+      while at < total - 0.15 do
+        while i < #arm.pts and s[i] < at do i = i + 1 end
+        local q = arm.pts[i]
+        local sa = 90 + layout.sym(35)
+        local sl = layout.range(0.5, 0.8) * size
+        local ex, ey = q[1] + sl * cos(sa * RAD), q[2] + sl * sin(sa * RAD)
+        local stub = layout.chance(0.5) and layout.sym(1) or nil
+        items[#items + 1] = { kind = "spur", q = q, e = { ex, ey }, a = sa, stub = stub, z = 0 }
+        -- the spur's two buds: a shoot from each (now and then one is blind)
+        for b = 1, 2 do
+          if b == 1 or layout.chance(0.85) then
+            local f = b == 1 and 0.45 or 0.92
+            local bx, by = lerp(q[1], ex, f), lerp(q[2], ey, f)
+            local lean = layout.sym(3) + (b == 1 and 7 or -7) * (cos(sa * RAD) >= 0 and 1 or -1)
+            local hedge = yt + layout.range(-0.3, 0.25)
+            local flop = layout.chance(0.3)
+            local pts, x, y, a = { { bx, by } }, bx, by, 90 + lean
+            local target = (hedge - by) * grown
+            local len, sway = 0, layout.range(0, 360)
+            while len < target do
+              a = 90 + lean + 4 * sin((len * 60 + sway) * RAD)
+              x, y = x + 0.12 * cos(a * RAD), y + 0.12 * sin(a * RAD)
+              len = len + 0.12
+              pts[#pts + 1] = { clamp(x, col[1] - 0.1, col[3] + 0.1), y }
+            end
+            if flop and grown >= 1 then                     -- over the top wire and down
+              local fa, side = a, layout.chance(0.5) and 1 or -1
+              for _ = 1, floor(layout.range(6, 12)) do
+                fa = fa + side * 14
+                x, y = x + 0.12 * cos(fa * RAD), y + 0.12 * sin(fa * RAD)
+                pts[#pts + 1] = { x, y }
+              end
+            end
+            shoot(pts, (b == 1 and 1.05 or 0.95) * S, plucked)
+          end
+        end
+        at = at + layout.range(2.2, 2.9) * size
+      end
+    end
+  end
+  function train.trenzado()
+    local yb = yg + layout.range(25, 40) * S
+    local function plucked(y) return y < yb + 0.12 * (yt - yb) end
+    local D = layout.range(40, 65) * S
+    local p0 = col[1] - layout.range(0, D)
+    local tilt, sag = layout.sym(0.04), layout.range(4, 9) * S
+    local function by(x)
+      local f = (x - p0) / D
+      return yb + tilt * (x - x0) - sag * sin(pi * (f - floor(f)))
+    end
+    local pts = {}
+    for i = 0, 60 do
+      local x = lerp(col[1] - 0.6, col[3] + 0.6, i / 60)
+      pts[#pts + 1] = { x, by(x) }
+    end
+    local canes = braid(layout.fork(), pts, S)
+    local poles = {}
+    for px = p0, col[3] + 0.3, D do
+      if px > col[1] - 0.3 then poles[#poles + 1] = { px, by(px) + layout.range(15, 40) * S, layout.sym(0.04) } end
+    end
+    place(MID, 0, 0, 0, function()
+      for _, p in ipairs(poles) do
+        local w, c, tx = 0.6 * S, { 0.4, 0.31, 0.26 }, p[1] + p[3] * (p[2] - yg)
+        local rod = { { p[1] - w, yg - 0.4 }, { tx - w, p[2] }, { tx + w, p[2] }, { p[1] + w, yg - 0.4 } }
+        ink.poly(rod, true) ink.fill(c)
+        ink.moveto(p[1] - 0.4 * w, yg - 0.4) ink.lineto(tx - 0.4 * w, p[2]) ink.stroke(mix(c, { 1, 1, 1 }, 0.35), 0.3, 0.7)
+        ink.poly(rod, true) ink.stroke(C.barkdark, 0.25, 0.85)
+      end
+    end)
+    place(MID + 1, 0, 0, 0, function()
+      drawbraid(rng.fork(), canes)
+      for _, p in ipairs(poles) do
+        local x, lo, hi = p[1], 1e9, -1e9
+        for _, cn in ipairs(canes) do
+          local nd = cn.nodes
+          for j = 1, #nd - 1 do
+            if nd[j][1] <= x and nd[j + 1][1] >= x then
+              local t = (x - nd[j][1]) / max(1e-9, nd[j + 1][1] - nd[j][1])
+              local y, h = lerp(nd[j][2], nd[j + 1][2], t), lerp(nd[j][3], nd[j + 1][3], t) / 2
+              lo, hi = min(lo, y - h), max(hi, y + h)
+            end
+          end
+        end
+        for k = 0, 1 do
+          local ax, bx = x - 0.9 * S + k * 0.9 * S, x + 0.3 * S + k * 0.9 * S
+          ink.moveto(ax, hi + 0.2 * S)
+          ink.curveto(ax + 0.8 * S, lerp(hi, lo, 0.3), bx + 0.8 * S, lerp(hi, lo, 0.7), bx, lo - 0.2 * S)
+          ink.stroke({ 0.42, 0.36, 0.26 }, 1.4, 1)
+          ink.moveto(ax, hi + 0.2 * S)
+          ink.curveto(ax + 0.8 * S, lerp(hi, lo, 0.3), bx + 0.8 * S, lerp(hi, lo, 0.7), bx, lo - 0.2 * S)
+          ink.stroke({ 0.85, 0.78, 0.6 }, 0.8, 1)
+        end
+      end
+    end)
+    local buds = {}
+    for _, cn in ipairs(canes) do
+      for _, nd in ipairs(cn.nodes) do
+        if nd[1] > x0 and nd[1] < x1 and nd[4] > -0.2 then
+          buds[#buds + 1] = { nd[1], nd[2] + 0.3 * nd[3] }
+        end
+      end
+    end
+    table.sort(buds, function(a, b) return a[1] < b[1] end)
+    local last, xm = -1e9, (x0 + x1) / 2
+    for _, b in ipairs(buds) do
+      if b[1] - last > layout.range(0.7, 1.0) * size then
+        last = b[1]
+        local lean = clamp((b[1] - xm) / cw * 40, -20, 20) + layout.sym(10)
+        local a0, turn = 90 - lean, lean > 0 and 1 or -1
+        local arc, target = layout.range(10, 70), (yt - yb) * grown * layout.range(0.75, 1.1)
+        local sx, sy = b[1], b[2]
+        local spts, len = { { sx, sy } }, 0
+        while len < target and sx > col[1] - 0.3 and sx < col[3] + 0.3 do
+          local a = a0 - turn * arc * (len / target) ^ 2
+          sx, sy = sx + 0.12 * cos(a * RAD), max(yg + 0.3, sy + 0.12 * sin(a * RAD))
+          len = len + 0.12
+          spts[#spts + 1] = { sx, sy }
+        end
+        shoot(spts, layout.range(0.9, 1.05) * S, plucked)
+      end
+    end
+  end
+  local training = train[g.pruning or "spur"]
+  if not training then error("florilegium-grapes: pruning=" .. tostring(g.pruning) .. "? one of spur, trenzado", 0) end
+  training()
 
   -- summer pruning: a leaf whose blade hangs over a bunch is pulled, stalk and all
   local kept = {}

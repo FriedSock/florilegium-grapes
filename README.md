@@ -3,40 +3,68 @@
 A grapevine that grows in the margin of a page. This is a fork of Kevin Raymond's
 [florilegium](https://github.com/kevinraymond/florilegium), the LuaLaTeX package that grows
 Delft-blue flowers in the margin of a page. The fork keeps only one plant, and draws it properly:
-a spur-pruned grapevine trained up the margin as a vineyard trains it, in six varieties, through
-the seasons. None of it is an image file. Every cane, leaf, tendril and grape is a curve computed
-while the page is made, so every page grows a vine of its own.
+a grapevine pruned and trained as a vineyard trains it, spur-pruned up the margin or braided low
+across it in Tenerife's trenzado, in six varieties, through the seasons. None of it is an image
+file. Every cane, leaf, tendril and grape is a curve computed while the page is made, so every
+page grows a vine of its own.
 
 ![six grapevines at harvest: pinot noir, saperavi, gewürztraminer, rkatsiteli, regent and johanniter](gallery/varieties.png)
 
 *Six varieties at harvest, each the margin of a page of `showcase.tex`.*
 
-[The vine](#the-vine) · [the bunches](#the-bunches) · [the leaves](#the-leaves) ·
-[the seasons](#the-seasons) · [the varieties](#the-varieties) · [quick start](#quick-start) ·
-[Kevin's original repository](https://github.com/kevinraymond/florilegium)
+[The vine](#the-vine) · [the trenzado](#the-trenzado) · [the bunches](#the-bunches) ·
+[the leaves](#the-leaves) · [the seasons](#the-seasons) · [the varieties](#the-varieties) ·
+[quick start](#quick-start) · [Kevin's original repository](https://github.com/kevinraymond/florilegium)
 
 ## The vine
 
 <img src="gallery/page.png" alt="a page of text with a saperavi vine in its margin" width="320" align="right">
 
-The vine is laid out as a vineyard's is, spur-pruned on a vertical shoot positioned trellis, seen
-from the side of the row, with the margin as its panel:
+By default (`pruning=spur`) the vine is laid out as a vineyard's is, spur-pruned on a vertical
+shoot positioned trellis, seen from the side of the row, with the margin as its panel:
 
 - **The trunk** rises from the foot of the page to the fruiting wire, a third of the way up, and
   divides into the **cordon**, two barked, knotted arms laid along the wire.
 - **Spurs** sit along the cordon, each a stub of last year's cane cut back to two buds, its
-  pruning cut showing, an old dead stub beside some of them.
+  pruning cut showing, an old dead stub beside some of them. Each leans its own way, and the two
+  shoots from its buds splay apart.
 - **Shoots** grow from the buds, trained straight up between the catch wires, thick at the base,
   their nodes swollen, and hedged level at the top, where some flop over.
 - At every node, a **leaf** on a long stalk, alternately left and right, with the dormant bud in
-  its axil. Opposite the leaf: nothing at the first two nodes, a **bunch** at the third and
-  fourth (now and then the fifth), then a forked, coiling **tendril** at two nodes in every
-  three. That is how a real shoot carries them.
+  its axil. Opposite the leaf: nothing at the first two nodes, a **bunch** at one or two of the
+  third, fourth and fifth, then a forked, coiling **tendril** at two nodes in every three. That
+  is how a real shoot carries them. Which nodes fruit is chosen so the bunches spread through
+  the fruit zone: a node at the height of a bunch already hanging is unlikely to carry another,
+  and bunches that would crowd one another are thinned.
 - The **fruit zone** just above the cordon is stripped of its leaves, as growers strip it in
   summer, so the bunches hang clear. Tendrils that reach a catch wire coil round it.
 
 The vine grows in the wider side margin, and in a two-sided document it changes sides with the
 page and is drawn mirrored.
+
+## The trenzado
+
+![six trenzado vines at harvest: pinot noir, saperavi, gewürztraminer, rkatsiteli, regent and johanniter](gallery/trenzado.png)
+
+*The same six varieties, the same pages, trained as trenzado (`pruning=trenzado`).*
+
+The *cordón trenzado*, the braided cordon, is the old training of the Valle de La Orotava in
+Tenerife, found nowhere else. Each year's cane is plaited onto the old ones, so the cordon grows
+into a rope of wood that can run for ten metres or more along the slope, lifted off the ground on
+props. It is drawn as a stretch of that rope crossing the margin, with no trunk in sight (the
+braid begins a metre and a half from it):
+
+- **The braid** is a loose plait of old canes, barked like the spur vine's trunk, each kinked at
+  its nodes and wandering over and under the others, with gaps between them. Its looseness is
+  set by `BRAID_LOOSENESS` in `florilegium-grapes-vine.lua`: 0 a tight bundle of six to eight
+  canes, 1 two to four spread wide (0.6 by default).
+- **Thin steel poles** hold it up close to the ground, each lashed to it with two turns of twine;
+  between them it sags. (The valley holds its braids 60 to 80 cm up on forked props, once of
+  laurel wood and now often of building rebar; the drawing keeps it lower.)
+- **Shoots** grow from the nodes of the braid's canes, wherever one faces out, with no wires to
+  train them: they rise at a lean of their own and arch over under their weight.
+- The bunches hang low over the braid, a narrow band of leaves above it is plucked, and the
+  tendrils have nothing to grip.
 
 ## The bunches
 
@@ -117,6 +145,8 @@ and `florilegium-grapes-vine.lua` beside your document (or upload them to an
 | option or command | what it does |
 |---|---|
 | `vine=<variety>` | the variety, for the whole document (default `pinot`) |
+| `pruning=<style>` | how the vine is pruned and trained: `spur` (the default) or `trenzado` (see [the trenzado](#the-trenzado)) |
+| `\florilegiumgrapespruning{style}` | the pruning from the page this is set on |
 | `aging` | the vine ages from spring on the first page to autumn on the last (two runs) |
 | `\florilegiumgrapesvine{variety}` | the variety from the page this is set on |
 | `\florilegiumgrapesage{a}` | the season of the following pages: 0 spring, 0.5 summer, 1 autumn (default: late summer) |
@@ -155,12 +185,21 @@ code throughout, with no generative image models.
 - The varieties' leaves and bunches follow the ampelography of German and English Wikipedia
   (Pinot noir, Regent, Johanniter, Gewürztraminer, Saperavi) and Georgian descriptions of
   Rkatsiteli; the colours and shapes were checked against photographs on Wikimedia Commons.
+- The bunch's stalks follow Y. N. Shavrukov, I. B. Dry and M. R. Thomas, *Inflorescence and
+  bunch architecture development in Vitis vinifera L.* (Australian Journal of Grape and Wine
+  Research 10, 2004): 20 to 38 branches on the rachis, the gaps between them longest at the
+  top, each carrying a group of six to eight grapes; and J. Tello and others' survey of the
+  rachis in 114 cultivars (Genes 11, 2020).
 - Bunch sizes follow Michigan State University's cluster weights for Pinot noir and Cornell
   Cooperative Extension's Long Island trial for Chardonnay; the bunch's structure follows the
   literature on grapevine inflorescence architecture (the rachis, its spiral of branches and
   the pedicels, as in J. Exp. Bot. 70, 2019).
 - The training follows Penn State and University of Georgia extension guidance on
-  spur-pruned, vertically shoot-positioned vines.
+  spur-pruned, vertically shoot-positioned vines. The trenzado follows the Ayuntamiento de La
+  Orotava and the Valle de La Orotava denomination of origin's description of the
+  [cordón trenzado](https://www.laorotava.es/sites/default/files/documentos/cordon_trenzado_tradicional_o_cordon_trenzado_multiple.pdf)
+  and photographs of the braided vines of Suertes del Marqués published by
+  [wineanorak.com](https://wineanorak.com/2021/06/28/bodegas-arautava-tenerife-wines-marked-by-spanish-and-portuguese-invaders-volcanic-eruptions-and-a-vine-training-system-more-crazy-than-colares/).
 
 ## License
 

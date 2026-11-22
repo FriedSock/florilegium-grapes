@@ -144,7 +144,7 @@ function M.stroke(c, w, op, mult)
   if g then put("q /" .. g .. " gs " .. s .. " Q") else put("q " .. s .. " Q") end
 end
 -- clip to the current path until the matching unclip()
-function M.clip() put("q " .. take() .. " W n") end
+function M.clip(evenodd) put("q " .. take() .. (evenodd and " W* n" or " W n")) end
 function M.unclip() put("Q") end
 
 -- write all layers, in order, as one literal node at the current position
