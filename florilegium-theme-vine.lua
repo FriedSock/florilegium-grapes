@@ -1,6 +1,6 @@
 -- florilegium-theme-vine.lua -- a theme for florilegium: one grapevine of a chosen variety,
 -- trained up the margin as a vineyard's is, in its own colors.
--- Copyright (c) 2026 Kevin Raymond. MIT License: see LICENSE or florilegium.sty.
+-- Copyright (c) 2026 Jack Bracewell. MIT License: see LICENSE or florilegium.sty.
 --
 -- A spur-pruned vine on a vertical shoot positioned trellis (see M.page for how it is laid
 -- out), and its organs:
