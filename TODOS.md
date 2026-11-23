@@ -7,8 +7,6 @@ A temporary list of outstanding work. Remove an item when it is done, and the fi
 
 ## Leaves (`florilegium-grapes-vine.lua`)
 
-- The ends of the canes are always drawn trimmed (hedged). That is right at veraison and harvest but not in spring or early summer, when the shoots are still growing and end in their soft, unfolding tips.
-
 ### Handled, could be improved
 
 - Older leaves: done, just about (each leaf's age, highest low on the cane and growing with the season, deepens its green and tears its edge here and there; browning, as a band, a scorch and a torn scorch, was tried on a comparison sheet and dropped). Could be improved: the darkening is one even shift of the whole blade, where a real old leaf is darker and duller in patches and its veins stand out paler; the tears are all one kind (a V from the edge) and could include splits along a vein, a lobe tip broken off, or a small hole; and the oldest leaves could curl a little at their edges.

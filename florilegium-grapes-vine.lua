@@ -727,6 +727,51 @@ local function band(pts, w0, w1, c)
   ink.smooth(shape, true) ink.stroke(scale(c, 0.5), 0.25, 0.8)
   return L, R, s, total
 end
+-- ---------------------------------------------------------------- the growing tip
+-- along +x from the origin, L long, the stem w thick where it starts: a shoot that is still
+-- growing ends in a soft tip, not a cut. Its last few centimetres nod over in a hook, and the
+-- newest leaves, too young to have opened, stay folded along their midribs, clasped round it
+-- one inside the next, the smallest at the very end. They are downy, the more so in a hairy
+-- variety, and flushed bronze-red until they open and green up
+local function growing_tip(r, L, w, stem, c, fuzz)
+  local hand, bow = r.chance(0.5) and 1 or -1, r.range(80, 130)
+  local pts, x, y, n = { { 0, 0 } }, 0, 0, 10
+  local function heading(t) return hand * bow * t ^ 1.6 end
+  for i = 1, n do
+    local dx, dy = dir(heading(i / n))
+    x, y = x + L / n * dx, y + L / n * dy
+    pts[#pts + 1] = { x, y }
+  end
+  band(pts, w, 0.25 * w, stem)
+  -- each folded leaf a narrow blade from its node toward the tip, off to its own side; the
+  -- outer ones longer, and the last a bud of them at the end
+  local hair = mix(c, HAIR, 0.5 + 0.4 * fuzz)
+  local side = r.chance(0.5) and 1 or -1
+  for _, f in ipairs({ 0.3, 0.55, 0.78, 1 }) do
+    side = -side
+    local i = 1 + floor(f * n + 0.5)
+    local p = pts[min(i, #pts)]
+    local a = heading(f) + side * r.range(6, 16)
+    local len = L * lerp(0.6, 0.3, f) * r.range(0.85, 1.1)
+    local ca, sa = dir(a)
+    local blade = {}
+    for k = 0, 8 do
+      local s = k / 8
+      local hw = 0.32 * len * sin(pi * s) ^ 0.6 * (1 - 0.3 * s)
+      blade[#blade + 1] = { p[1] + s * len * ca - side * hw * sa, p[2] + s * len * sa + side * hw * ca }
+    end
+    for k = 7, 1, -1 do
+      local s = k / 8
+      local hw = 0.14 * len * sin(pi * s)
+      blade[#blade + 1] = { p[1] + s * len * ca + side * hw * sa, p[2] + s * len * sa - side * hw * ca }
+    end
+    ink.smooth(blade, true) ink.fill(scale(c, lerp(0.85, 1.05, f)))
+    ink.moveto(p[1], p[2]) ink.lineto(p[1] + 0.9 * len * ca, p[2] + 0.9 * len * sa)
+    ink.stroke(scale(c, 0.7), 0.2, 0.7)
+    ink.smooth(blade, true) ink.stroke(hair, 0.25 + 0.35 * fuzz, 0.85)
+  end
+end
+
 local function braid(r, pts, S)
   local n = #pts
   local s, total = ink.arclen(pts)
@@ -866,11 +911,12 @@ end
 --   - along the cordon, every hand's breadth, a spur: a stub of last year's cane cut back to
 --     two buds, its cut end showing;
 --   - from each bud a shoot (a cane once it ripens to brown in autumn), trained straight up
---     between the catch wires, thick at its base, its nodes swollen; hedged flat at the top,
---     where some lean over;
+--     between the catch wires, thick at its base, its nodes swollen; ending in its soft growing
+--     tip until veraison, hedged flat at the top from then on, where some lean over;
 --   - at every node a leaf, alternately left and right, held at a depth of its own so the
 --     canopy overlaps, the dormant bud in its axil, and from about one in five a lateral shoot,
---     from early summer, curving up with two to four small leaves and a tendril of its own;
+--     from early summer, curving up with two to four small leaves, a tendril of its own and
+--     a growing tip;
 --   - in the fruit zone just above the cordon, the bunches hang from the third, fourth and
 --     fifth nodes, and most leaves there are plucked to let the light and air at them; higher,
 --     tendrils opposite the leaves, gripping the catch wires where they reach one;
@@ -925,6 +971,11 @@ function M.page(g)
   -- the leaf and the main shoot, and bends up toward the light, with short internodes, small
   -- leaves alternately left and right that shrink toward its soft tip, and a tendril from
   -- about its second node
+  local function tip(pts, L, w0, z)
+    local a, b = pts[#pts - 1], pts[#pts]
+    items[#items + 1] = { kind = "tip", node = b, a = deg(b[1] - a[1], b[2] - a[2]), L = L, w = 0.45 * w0, z = z }
+  end
+
   local function lateral(node, stem_angle, side)
     local r = laterals
     -- it grows from flowering (age 0.3) to its full length by midsummer (0.6), already a third
@@ -949,6 +1000,7 @@ function M.page(g)
       pts[#pts + 1] = at
     end
     items[#items + 1] = { kind = "shoot", pts = pts, z = depth, w0 = thickness }
+    tip(pts, 0.32 * size, thickness, depth)
     -- its leaves are small: the first under half a main shoot's full leaf (1.2 size), each
     -- after it smaller toward the soft tip; their stalks are shorter for their blades than a
     -- main shoot's leaves' (0.75 to 1.05 of the blade), and leave the stem 50 to 75 degrees
@@ -979,6 +1031,8 @@ function M.page(g)
   local function shoot(pts, w0, plucked)
     counts.shoot = counts.shoot + 1
     items[#items + 1] = { kind = "shoot", pts = pts, z = 0, w0 = w0 }
+    -- a main shoot grows on until it is hedged, from about veraison
+    if age < 0.55 then tip(pts, 0.55 * size, w0, 0.01) end
     local ss, tot = ink.arclen(pts)
     local nat, node, side, j = layout.range(0.15, 0.25) * size, 0, layout.chance(0.5) and 1 or -1, 1
     local nodes = {}
@@ -1334,6 +1388,11 @@ function M.page(g)
         counts.grape = counts.grape + bunch(rng.fork(), sp, it.L, v.ink or BERRY[sp.berrytone], BLOOM[sp.berrytone], lx,
           ripe, it.rb, v.n, v)
         ink.pop()
+      end)
+    elseif k == "tip" then
+      local c = mix(mix(mix(C.leaflight, C.unripe, 0.6), C.red, 0.18), white and C.yellow or C.red, 0.5 * fall)
+      place(layer(it.z), it.node[1], it.node[2], it.a, function()
+        growing_tip(rng.fork(), it.L, it.w, mix(shootc, C.shoot, 0.6), c, v.hair)
       end)
     elseif k == "tendril" then
       counts.tendril = counts.tendril + 1
