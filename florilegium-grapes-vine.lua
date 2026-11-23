@@ -986,9 +986,9 @@ function M.page(g)
   -- the leaf and the main shoot, and bends up toward the light, with short internodes, small
   -- leaves alternately left and right that shrink toward its soft tip, and a tendril from
   -- about its second node
-  local function tip(pts, L, w0, z)
+  local function tip(pts, L, w, z)
     local a, b = pts[#pts - 1], pts[#pts]
-    items[#items + 1] = { kind = "tip", node = b, a = deg(b[1] - a[1], b[2] - a[2]), L = L, w = 0.45 * w0, z = z }
+    items[#items + 1] = { kind = "tip", node = b, a = deg(b[1] - a[1], b[2] - a[2]), L = L, w = w, z = z }
   end
 
   local function lateral(node, stem_angle, side)
@@ -1014,8 +1014,8 @@ function M.page(g)
       at = { at[1] + internode / steps_per_internode * dx, at[2] + internode / steps_per_internode * dy }
       pts[#pts + 1] = at
     end
-    items[#items + 1] = { kind = "shoot", pts = pts, z = depth, w0 = thickness }
-    tip(pts, 0.32 * size, thickness, depth)
+    items[#items + 1] = { kind = "shoot", pts = pts, z = depth, w0 = thickness, w1 = 0.45 * thickness }
+    tip(pts, 0.32 * size, 0.45 * thickness, depth)
     -- its leaves are small: the first under half a main shoot's full leaf (1.2 size), each
     -- after it smaller toward the soft tip; their stalks are shorter for their blades than a
     -- main shoot's leaves' (0.75 to 1.05 of the blade), and leave the stem 50 to 75 degrees
@@ -1040,14 +1040,15 @@ function M.page(g)
     end
   end
 
-  -- a shoot along pts, w0 thick at its base (a real one is about 1 cm): at its nodes, a leaf at
-  -- each, alternately left and right, its bud in the axil; bunches low, tendrils higher, now
-  -- and then a lateral
+  -- a shoot along pts, w0 thick at its base (a real one is 1 to 1.5 cm), thinning steadily to
+  -- under a third of that at its end, where the newest internodes have hardly thickened: at
+  -- its nodes, a leaf at each, alternately left and right, its bud in the axil; bunches low,
+  -- tendrils higher, now and then a lateral
   local function shoot(pts, w0, plucked)
     counts.shoot = counts.shoot + 1
-    items[#items + 1] = { kind = "shoot", pts = pts, z = 0, w0 = w0 }
+    items[#items + 1] = { kind = "shoot", pts = pts, z = 0, w0 = w0, w1 = 0.3 * w0 }
     -- a main shoot grows on until it is hedged, from about veraison
-    if age < 0.55 then tip(pts, 0.55 * size, w0, 0.01) end
+    if age < 0.55 then tip(pts, 0.55 * size, 0.3 * w0, 0.01) end
     local ss, tot = ink.arclen(pts)
     local nat, node, side, j = layout.range(0.15, 0.25) * size, 0, layout.chance(0.5) and 1 or -1, 1
     local nodes = {}
@@ -1206,7 +1207,7 @@ function M.page(g)
                 pts[#pts + 1] = { x, y }
               end
             end
-            shoot(pts, (b == 1 and 1.05 or 0.95) * S, plucked)
+            shoot(pts, (b == 1 and 1.35 or 1.25) * S, plucked)
           end
         end
         at = at + layout.range(2.2, 2.9) * size
@@ -1291,7 +1292,7 @@ function M.page(g)
           len = len + 0.12
           spts[#spts + 1] = { sx, sy }
         end
-        shoot(spts, layout.range(0.9, 1.05) * S, plucked)
+        shoot(spts, layout.range(1.2, 1.4) * S, plucked)
       end
     end
   end
@@ -1343,7 +1344,7 @@ function M.page(g)
       end)
     elseif k == "shoot" then
       place(layer(it.z) == MID and MID or layer(it.z), 0, 0, 0, function()
-        band(it.pts, it.w0, 0.45 * it.w0, shootc)
+        band(it.pts, it.w0, it.w1, shootc)
       end)
     elseif k == "node" then
       place(MID, 0, 0, 0, function()
