@@ -1053,7 +1053,7 @@ function M.page(g)
       local stalk_length = r.range(0.6, 0.85) * L
       local j, axis = hang(leaf_node, stalk_angle, stalk_length)
       items[#items + 1] = { kind = "leaf", node = leaf_node, j = j, axis = axis + r.sym(18), L = L,
-        z = depth + r.sym(0.4), turn = fall * r.u(), tint = r.sym(1), young = k == leaf_count and 0.8 or 0 }
+        z = depth + r.sym(0.4), stem = depth, turn = fall * r.u(), tint = r.sym(1), young = k == leaf_count and 0.8 or 0 }
       -- a tendril opposite the second leaf, smaller than a main shoot's (0.7 to 1.1 size)
       if k == 2 then
         items[#items + 1] = { kind = "tendril", node = leaf_node, a = along + side * r.range(40, 65),
@@ -1124,7 +1124,7 @@ function M.page(g)
         local L = 1.2 * size * v.leaf * (node <= 2 and 0.8 or 1) * (1.25 - 0.75 * u ^ 1.1)
           * layout.range(0.88, 1.08)
         local j, axis = hang(p, ta - side * layout.range(55, 85), layout.range(0.75, 1.05) * L)
-        items[#items + 1] = { kind = "leaf", node = p, j = j, axis = axis + layout.sym(18), L = L, z = layout.sym(1),
+        items[#items + 1] = { kind = "leaf", node = p, j = j, axis = axis + layout.sym(18), L = L, z = layout.sym(1), stem = 0,
           turn = fall * (layout.u() < 0.75 and 1 or 0.35) * layout.range(0.5, 1), tint = layout.sym(1),
           young = clamp((u - 0.6) / 0.4, 0, 1), old = clamp(1.15 - u / 0.7, 0, 1) }
       end
@@ -1432,7 +1432,10 @@ function M.page(g)
       c = mix(c, scale(C.leafdark, 0.9), 0.5 * old)
       local pc = mix(C.petiole, C.red, white and 0.1 or 0.35)
       local n, j = it.node, it.j
-      place(layer(it.z), 0, 0, 0, function()
+      -- a stalk reaching forward is drawn just over the shoot it grows from, under every blade
+      -- in front of that shoot, so it never lies across a blade that hides its node; one
+      -- reaching back stays with its own blade, behind the shoot
+      place(min(layer(it.stem), layer(it.z)) + 0.25, 0, 0, 0, function()
         -- the leaf's stalk: out from the node, arching up, the blade hanging from its end;
         -- swollen where it joins the cane and where it meets the blade
         local pl = dist(n[1], n[2], j[1], j[2])
@@ -1446,6 +1449,8 @@ function M.page(g)
         local w = 0.055 * size * it.L / (1.2 * size)
         band(stalk, 1.5 * w, 0.85 * w, pc)
         ink.circle(n[1], n[2], 0.9 * w) ink.fill(scale(pc, 0.85))
+      end)
+      place(layer(it.z) + 0.5, 0, 0, 0, function()
         ink.push() ink.translate(j[1], j[2]) ink.rotate(it.axis - 90) ink.scale(it.L)
         leaf(rng.fork(), c, v, sp.teeth, sp.dissection, lx, under, pose, (it.axis - 90) * RAD, fuzz, old)
         ink.pop()
