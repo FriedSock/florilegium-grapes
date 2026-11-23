@@ -2,4 +2,4 @@
 source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 showcase
 composite seasons
-rasterise gallery/seasons.pdf 1 gallery/seasons.png 802
+rasterise gallery/seasons.pdf 1 gallery/seasons.png 1604

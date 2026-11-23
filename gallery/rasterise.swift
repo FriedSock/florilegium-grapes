@@ -1,4 +1,4 @@
-import AppKit
+import ImageIO
 import PDFKit
 
 let args = CommandLine.arguments
@@ -17,12 +17,14 @@ if args.count == 9 {
 }
 let scale = CGFloat(Double(args[4])!) / crop.width
 let w = Int((crop.width * scale).rounded()), h = Int((crop.height * scale).rounded())
-let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: w, pixelsHigh: h, bitsPerSample: 8, samplesPerPixel: 4,
-  hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
-let ctx = NSGraphicsContext(bitmapImageRep: rep)!.cgContext
+let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+  space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
 ctx.setFillColor(.white)
 ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
 ctx.scaleBy(x: scale, y: scale)
 ctx.translateBy(x: -crop.minX, y: -crop.minY)
 page.draw(with: .mediaBox, to: ctx)
-try! rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: args[3]))
+let dpi = 72 * scale
+let out = CGImageDestinationCreateWithURL(URL(fileURLWithPath: args[3]) as CFURL, "public.png" as CFString, 1, nil)!
+CGImageDestinationAddImage(out, ctx.makeImage()!, [kCGImagePropertyDPIWidth: dpi, kCGImagePropertyDPIHeight: dpi] as CFDictionary)
+CGImageDestinationFinalize(out)

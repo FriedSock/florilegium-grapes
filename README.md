@@ -102,7 +102,7 @@ down, johanniter's are nearly smooth.
 
 ## The seasons
 
-![one pinot noir vine in spring, summer, at veraison and in autumn](gallery/seasons.png)
+<img src="gallery/seasons.png" alt="one pinot noir vine in spring, summer, at veraison and in autumn" width="802">
 
 *Pinot noir through the year: short shoots and no fruit in spring, green bunches in summer,
 the grapes colouring one by one at veraison, and ripe bunches among red leaves on brown canes
