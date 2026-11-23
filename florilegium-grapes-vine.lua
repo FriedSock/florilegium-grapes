@@ -12,7 +12,7 @@
 -- The season (g.age) ripens the grapes from green through veraison, and in autumn turns the
 -- leaves red (a black grape's) or yellow (a white one's).
 -- Use: \usepackage[vine=pinot]{florilegium-grapes} (or saperavi, gewurztraminer, rkatsiteli,
--- regent, johanniter).
+-- regent, johanniter, touriga, vidiano).
 
 local ink = require("florilegium-grapes-ink")
 local M = {}
@@ -52,6 +52,11 @@ local BLOOM = { dark = { 0.6, 0.64, 0.78 }, red = { 0.82, 0.66, 0.72 }, pale = {
 -- of bunches on Wikimedia Commons (pinot noir in Burgundy blue-black under a dusty bloom;
 -- gewurztraminer's grapes each a shade from gold to red-brown; rkatsiteli's and johanniter's
 -- flecked with rust; regent's round and larger, about 155 g a bunch).
+-- Touriga nacional's leaf is small, its petiolar sinus an open U; its bunch small, 100 to 250
+-- g, of medium density, its grapes blue-black, 0.9 to 1.8 g (Vine to Wine Circle's
+-- ampelography). Vidiano's bunch is medium to large and fairly dense, its grapes yellow-green
+-- and thick-skinned (Yiannis Karakasis MW); no description of its leaf was found, so its
+-- leaf's figures are typical values.
 -- hair: how hairy its leaves' undersides are (0..1); its young leaves near the tips are
 -- hairy on top too. Rkatsiteli's leaves are known for their down, regent's young leaves are
 -- white-woolly (German Wikipedia); the others typical
@@ -68,13 +73,19 @@ local VAR = {
     hair = 0.55 },
   johanniter = { leaf = 1.0, basal = 140, teeth = 0.07, cm = 13, mm = 14, n = 100, ink = { 0.9, 0.8, 0.52 },
     alt = { 0.84, 0.84, 0.58 }, vary = 0.4, spots = true, hair = 0.15 },
+  touriga = { leaf = 0.85, basal = 140, teeth = 0.07, cm = 12, mm = 13, n = 100, ink = { 0.13, 0.12, 0.24 }, bloom = 0.35,
+    hair = 0.35 },
+  vidiano = { leaf = 1.0, basal = 150, teeth = 0.07, cm = 16, mm = 15, n = 110, ink = { 0.76, 0.8, 0.46 },
+    alt = { 0.82, 0.8, 0.48 }, vary = 0.3, hair = 0.4 },
 }
 -- and the traits a vine of the variety may take, one each drawn for the document: lobes (3
 -- or 5, as many as the leaf is cut into, any one of the list), depth (how deep its sinuses
 -- cut, a range), tone (dark, red or pale grapes), berry (round, oval), bunch (cylindrical,
 -- conical, winged) and compact (2 fairly dense, 3 dense). Pinot noir's leaf is slightly
 -- lobed, three to five; saperavi's three-lobed; regent's three-lobed, rarely five, cut
--- medium-deep; johanniter's and rkatsiteli's five-lobed (Wikipedia's ampelography)
+-- medium-deep; johanniter's and rkatsiteli's five-lobed (Wikipedia's ampelography); touriga
+-- nacional's five-lobed with pronounced sinuses, its bunch cylindrical to conical; vidiano's
+-- bunch conical, its grapes round or a little oval (its leaf's lobes and depth typical)
 local TRAITS = {
   pinot = { lobes = { 3, 5 }, depth = { 0.15, 0.3 }, tone = "dark", berry = { "round", "round", "oval" },
     bunch = { "cylindrical" }, compact = 3 },
@@ -88,6 +99,10 @@ local TRAITS = {
     bunch = { "cylindrical", "cylindrical", "conical" }, compact = 3 },
   johanniter = { lobes = { 5 }, depth = { 0.35, 0.5 }, tone = "pale", berry = { "round" }, bunch = { "cylindrical" },
     compact = 3 },
+  touriga = { lobes = { 5 }, depth = { 0.35, 0.5 }, tone = "dark", berry = { "round" }, bunch = { "cylindrical", "conical" },
+    compact = 2 },
+  vidiano = { lobes = { 5 }, depth = { 0.25, 0.4 }, tone = "pale", berry = { "round", "round", "oval" },
+    bunch = { "conical" }, compact = 3 },
 }
 -- the document's vine of a variety (docseed: \florilegiumgrapesseed, or 0), the same on every page
 local function vine(variety, docseed)

@@ -136,7 +136,8 @@ and `florilegium-grapes-vine.lua` beside your document (or upload them to an
 ```latex
 \usepackage[a4paper,left=68mm,right=22mm]{geometry}   % a wide margin for the vine
 \usepackage[vine=pinot]{florilegium-grapes}           % or saperavi, gewurztraminer,
-                                                      % rkatsiteli, regent, johanniter
+                                                      % rkatsiteli, regent, johanniter,
+                                                      % touriga, vidiano
 ...
 \florilegiumgrapesage{0.8}                            % optional: late summer
 \florilegiumgrapesvine{saperavi}                      % optional: another variety from here on
