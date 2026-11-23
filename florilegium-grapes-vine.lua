@@ -869,7 +869,8 @@ end
 --     between the catch wires, thick at its base, its nodes swollen; hedged flat at the top,
 --     where some lean over;
 --   - at every node a leaf, alternately left and right, held at a depth of its own so the
---     canopy overlaps, the dormant bud in its axil, and now and then a short lateral shoot;
+--     canopy overlaps, the dormant bud in its axil, and from about one in five a lateral shoot,
+--     from early summer, curving up with two to four small leaves and a tendril of its own;
 --   - in the fruit zone just above the cordon, the bunches hang from the third, fourth and
 --     fifth nodes, and most leaves there are plucked to let the light and air at them; higher,
 --     tendrils opposite the leaves, gripping the catch wires where they reach one;
@@ -878,6 +879,7 @@ end
 function M.page(g)
   local rng = ink.rng(g.seed * 7919 + 811)
   local layout = rng.fork()
+  local laterals = ink.rng(g.seed * 7919 + 812)
   ink.set_transform(ink.page_transform(g.mirror and g.pw))
   local lx = g.mirror and -1 or 1                -- the light's side in layout x: the page's upper left
   local sp = vine(g.vine or "pinot", g.docseed or 0)
@@ -908,6 +910,69 @@ function M.page(g)
 
   local items, wires, hung = {}, {}, {}
   local shootc = mix(C.shoot, C.cane, wooded)
+  -- a leaf on its stalk: where the stalk ends, petiole_length out from the node, and which way
+  -- the blade hangs from it, between the stalk's direction and straight down
+  local function hang(node, petiole_angle, petiole_length)
+    local px, py = dir(petiole_angle)
+    return { node[1] + petiole_length * px, node[2] + petiole_length * py }, deg(0.55 * px, 0.55 * py - 0.6)
+  end
+
+  -- a lateral (a side shoot): each axil, the angle between a leaf's stalk and the shoot, holds
+  -- two buds, the dormant one that waits for next spring and a lateral bud that grows at once.
+  -- Laterals start around flowering, in early summer, when the main shoot is growing hard, and
+  -- lengthen through the summer; growers strip them from the fruit zone with its leaves, so
+  -- they grow only above it. Each is a shoot in small: it leaves the axil at an angle, between
+  -- the leaf and the main shoot, and bends up toward the light, with short internodes, small
+  -- leaves alternately left and right that shrink toward its soft tip, and a tendril from
+  -- about its second node
+  local function lateral(node, stem_angle, side)
+    local r = laterals
+    -- it grows from flowering (age 0.3) to its full length by midsummer (0.6), already a third
+    -- grown when it first shows; two to four leaves, fewer early on
+    local flowering, midsummer = 0.3, 0.6
+    local season = clamp((age - flowering) / (midsummer - flowering), 0.35, 1)
+    local leaf_count = max(2, floor(r.range(2, 3.99) * season + 0.5))
+    -- its internodes are short, under half a main shoot's (1.0 to 1.35 size), and its stem
+    -- thin, about half a main shoot's
+    local internode = r.range(0.42, 0.55) * size
+    local thickness = 0.06 * size
+    -- it leaves the axil 35 to 55 degrees off the main shoot, toward the leaf's side, and each
+    -- step along it turns an eighth of the way back to straight up
+    local up, bend, steps_per_internode, tip_steps = 90, 0.12, 3, 2
+    local heading = stem_angle - side * r.range(35, 55)
+    local depth = r.sym(0.6)
+    local pts, at = { node }, node
+    for _ = 1, steps_per_internode * leaf_count + tip_steps do
+      heading = heading + bend * (up - heading)
+      local dx, dy = dir(heading)
+      at = { at[1] + internode / steps_per_internode * dx, at[2] + internode / steps_per_internode * dy }
+      pts[#pts + 1] = at
+    end
+    items[#items + 1] = { kind = "shoot", pts = pts, z = depth, w0 = thickness }
+    -- its leaves are small: the first under half a main shoot's full leaf (1.2 size), each
+    -- after it smaller toward the soft tip; their stalks are shorter for their blades than a
+    -- main shoot's leaves' (0.75 to 1.05 of the blade), and leave the stem 50 to 75 degrees
+    -- off it; only the leaf at the tip is still young and downy
+    local first_leaf, smaller_each = 0.55, 0.07
+    for k = 1, leaf_count do
+      side = -side
+      local leaf_node = pts[steps_per_internode * k + 1]
+      local before = pts[steps_per_internode * k]
+      local along = deg(leaf_node[1] - before[1], leaf_node[2] - before[2])
+      local L = size * v.leaf * (first_leaf - smaller_each * (k - 1)) * r.range(0.85, 1.1)
+      local stalk_angle = along - side * r.range(50, 75)
+      local stalk_length = r.range(0.6, 0.85) * L
+      local j, axis = hang(leaf_node, stalk_angle, stalk_length)
+      items[#items + 1] = { kind = "leaf", node = leaf_node, j = j, axis = axis + r.sym(18), L = L,
+        z = depth + r.sym(0.4), turn = fall * r.u(), tint = r.sym(1), young = k == leaf_count and 0.8 or 0 }
+      -- a tendril opposite the second leaf, smaller than a main shoot's (0.7 to 1.1 size)
+      if k == 2 then
+        items[#items + 1] = { kind = "tendril", node = leaf_node, a = along + side * r.range(40, 65),
+          L = r.range(0.45, 0.65) * size, z = depth }
+      end
+    end
+  end
+
   -- a shoot along pts, w0 thick at its base (a real one is about 1 cm): at its nodes, a leaf at
   -- each, alternately left and right, its bud in the axil; bunches low, tendrils higher, now
   -- and then a lateral
@@ -958,13 +1023,8 @@ function M.page(g)
         -- toward the young tip, and the first one or two are a little small
         local L = 1.2 * size * v.leaf * (node <= 2 and 0.8 or 1) * (1.25 - 0.75 * u ^ 1.1)
           * layout.range(0.88, 1.08)
-        local pa = ta - side * layout.range(55, 85)
-        local px, py = dir(pa)
-        local bx2, by2 = 0.55 * px, 0.55 * py - 0.6
-        local bl = sqrt(bx2 * bx2 + by2 * by2)
-        local pl = layout.range(0.75, 1.05) * L
-        items[#items + 1] = { kind = "leaf", node = p, j = { p[1] + pl * px, p[2] + pl * py },
-          axis = deg(bx2 / bl, by2 / bl) + layout.sym(18), L = L, z = layout.sym(1),
+        local j, axis = hang(p, ta - side * layout.range(55, 85), layout.range(0.75, 1.05) * L)
+        items[#items + 1] = { kind = "leaf", node = p, j = j, axis = axis + layout.sym(18), L = L, z = layout.sym(1),
           turn = fall * (layout.u() < 0.75 and 1 or 0.35) * layout.range(0.5, 1), tint = layout.sym(1),
           young = clamp((u - 0.6) / 0.4, 0, 1), old = clamp(1.15 - u / 0.7, 0, 1) }
       end
@@ -992,24 +1052,7 @@ function M.page(g)
         items[#items + 1] = { kind = "tendril", node = p, a = oa, L = layout.range(0.7, 1.1) * size, wire = wy,
           z = layout.sym(0.6) }
       end
-      if node >= 4 and not zone and layout.chance(0.18) then  -- a lateral from the axil
-        local la = ta - side * layout.range(30, 45)
-        local ll = layout.range(0.6, 1.1) * size
-        local lp = { { p[1], p[2] } }
-        for k = 1, 6 do
-          lp[#lp + 1] = { p[1] + ll * k / 6 * cos((la + side * 4 * k) * RAD), p[2] + ll * k / 6 * sin((la + side * 4 * k) * RAD) }
-        end
-        items[#items + 1] = { kind = "shoot", pts = lp, z = layout.sym(0.5), w0 = 0.05 * size }
-        for k = 1, 2 do
-          local q2 = lp[2 + 2 * k]
-          local pa2 = la + (k == 1 and side or -side) * 60
-          local px2, py2 = dir(pa2)
-          local L2 = 0.55 * size * v.leaf * layout.range(0.85, 1.1)
-          items[#items + 1] = { kind = "leaf", node = q2, j = { q2[1] + 0.8 * L2 * px2, q2[2] + 0.8 * L2 * py2 },
-            axis = pa2 - 20 * (pa2 > 90 and -1 or 1), L = L2, z = layout.sym(1), turn = fall * layout.u(), tint = layout.sym(1),
-            young = 0.7 }
-        end
-      end
+      if node >= 3 and not zone and age >= 0.3 and laterals.chance(0.2) then lateral(p, ta, side) end
     end
   end
 
