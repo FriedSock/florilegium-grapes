@@ -154,6 +154,7 @@ and `florilegium-grapes-vine.lua` beside your document (or upload them to an
 | `\florilegiumgrapesvine{variety}` | the variety from the page this is set on |
 | `width=<dim>` | how much of the margin the vine takes, from the text out (default: all of it); the vine is laid out to fit, and below about 4.4cm its leaves overhang the column. [`gallery/widths.pdf`](gallery/widths.pdf) shows a page at each of several widths, rebuilt by `gallery/widths.sh` |
 | `\florilegiumgrapeswidth{dim}` | the width from the page this is set on |
+| `\florilegiumgrapestextend` | at the very end of the text: on that page the row goes on under the text, the margin's cordon running on to the next vines along it, as on the last page of [`gallery/widths.pdf`](gallery/widths.pdf) |
 | `\florilegiumgrapesage{a}` | the season of the following pages: 0 spring, 0.5 summer, 1 autumn (default: late summer) |
 | `\def\florilegiumgrapesseed{7}` | before `\usepackage`: a fixed seed for the document instead of the page-number seed |
 

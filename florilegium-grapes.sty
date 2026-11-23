@@ -23,6 +23,8 @@
 %%                                       the text out (default: all of it; below about
 %%                                       4.4cm its leaves overhang the column)
 %%   \florilegiumgrapeswidth{dim}               the width from the page this is set on
+%%   \florilegiumgrapestextend                  at the very end of the text: the row of vines
+%%                                       goes on under it, in the space it leaves
 %%   \florilegiumgrapesage{a}                   the season of the following pages: 0 spring,
 %%                                       0.5 summer, 1 autumn (default: late summer)
 %%   \def\florilegiumgrapesseed{7}               before \usepackage: a fixed seed (any positive
@@ -84,6 +86,8 @@
   \directlua{florilegiumgrapes.pruning = "\luaescapestring{\florilegiumgrapes@pruning}"}\fi
 \newcommand\florilegiumgrapeswidth[1]{\directlua{florilegiumgrapes.width = \number\dimexpr#1\relax * 2.54 / (72.27 * 65536)}}
 \ifx\florilegiumgrapes@width\@empty\else\florilegiumgrapeswidth{\florilegiumgrapes@width}\fi
+\newcommand\florilegiumgrapestextend{\par
+  \directlua{florilegiumgrapes.textend(\number\value{page}, \number\dimexpr\pagetotal+\pagedepth\relax)}}
 \newcommand\florilegiumgrapespruning[1]{\directlua{florilegiumgrapes.pruning = "\luaescapestring{#1}"}}
 \newcommand\florilegiumgrapesvine[1]{\directlua{florilegiumgrapes.vine = "\luaescapestring{#1}"}}
 \newcommand\florilegiumgrapesage[1]{\directlua{florilegiumgrapes.age = florilegiumgrapes.number("\string\\florilegiumgrapesage", "\luaescapestring{#1}", nil)}}

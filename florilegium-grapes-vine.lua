@@ -972,6 +972,10 @@ function M.page(g)
   -- the margin's column, from the paper's edge to the text, from the foot of the page to its top
   local col = { g.colleft or 0.3, 0.45, g.colright, g.ph - 0.5 }
   local x0, x1 = col[1] + 0.15, col[3] - 0.1
+  -- on the page where the text ends, the row goes on under it, in the space the text leaves
+  local spill
+  if g.textend and g.textend - 0.5 - col[2] > 2.5 then spill = { col[3], col[2], g.textright, g.textend - 0.5 } end
+  local xr = spill and spill[3] - 0.3 or x1         -- where the row ends
   local yg, yt = col[2] + 0.05, col[4] - 0.35
   local cw, H = x1 - x0, yt - yg
   local size = clamp(cw / 5.5, 0.75, 1.15)
@@ -1082,11 +1086,19 @@ function M.page(g)
     local fruit, near = {}, {}
     for _, h in ipairs(hung) do near[#near + 1] = h end
     for _ = 1, layout.chance(0.55) and 2 or 1 do
+      -- the bunches spread over the heights: a node is crowded by the bunches hung near its
+      -- height, and weighed against the least crowded node, so one bunch more near it than
+      -- there makes it 1 in 9 to the other's 8 in 9, and evened up, it is even again
       local ws, sum, last = {}, 0, min(5, #nodes)
+      local crowd, least = {}, math.huge
       for n = 3, last do
-        local w = fruit[n] and 0 or 1
-        local y = yat(nodes[n])
-        for _, h in ipairs(near) do w = w * (1 - math.exp(-((y - h) / (0.6 * size)) ^ 2)) end
+        local y, c = yat(nodes[n]), 0
+        for _, h in ipairs(near) do c = c + math.exp(-((y - h) / (0.6 * size)) ^ 2) end
+        crowd[n] = c
+        if not fruit[n] then least = min(least, c) end
+      end
+      for n = 3, last do
+        local w = fruit[n] and 0 or math.exp(-math.log(9) * (crowd[n] - least))
         ws[n], sum = w, sum + w
       end
       if sum <= 0 then break end
@@ -1154,42 +1166,53 @@ function M.page(g)
     local yc = yg + 0.3 * H                         -- the fruiting wire
     wires = { yc + 0.3 * (yt - yc), yc + 0.58 * (yt - yc), yc + 0.84 * (yt - yc) }
     local function plucked(y) return y < yc + 0.22 * (yt - yc) end
-    -- 1. the trunk and the cordon
-    local xt = x0 + cw * layout.range(0.38, 0.52)
-    local trunk = {}
-    local ph = layout.range(0, 360)
-    for i = 0, 16 do
-      local t = i / 16
-      trunk[#trunk + 1] = { xt + 0.25 * size * sin((t * 300 + ph) * RAD) + layout.sym(0.05), lerp(yg, yc - 0.3, t) }
+    -- 1. the trunks and their cordons: one vine in the margin, and where the row goes on under
+    -- the text, the next vines along it, each cordon arm reaching halfway to its neighbour's
+    local trunks = { x0 + cw * layout.range(0.38, 0.52) }
+    if xr > x1 then
+      local gap = 5.5 * size * layout.range(1, 1.25)
+      while trunks[#trunks] + gap < xr - 1 do trunks[#trunks + 1] = trunks[#trunks] + gap end
     end
-    local top = trunk[#trunk]
     local arms = {}
-    for _, side in ipairs({ -1, 1 }) do
-      local reach = side < 0 and top[1] - x0 - 0.1 or x1 - top[1] - 0.1
-      if reach > 0.8 then
-        -- from inside the head, curving out and up onto the wire, then along it, knuckled
-        local y0 = top[2] - 0.55 * size
-        local pts = { { top[1] - side * 0.1 * size, y0 } }
-        local sag = layout.range(0.03, 0.1)
-        for i = 1, 18 do
-          local t = i / 18
-          local u = min(1, t * 2.6)
-          pts[#pts + 1] = { top[1] + side * reach * t, lerp(y0, yc, 1 - (1 - u) ^ 2.2) - sag * sin(t * 180 * RAD)
-            + 0.05 * size * sin((t * 900 + ph) * RAD) }
-        end
-        arms[#arms + 1] = { pts = pts, side = side }
+    for k, xt in ipairs(trunks) do
+      local trunk = {}
+      local ph = layout.range(0, 360)
+      for i = 0, 16 do
+        local t = i / 16
+        trunk[#trunk + 1] = { xt + 0.25 * size * sin((t * 300 + ph) * RAD) + layout.sym(0.05), lerp(yg, yc - 0.3, t) }
       end
+      local top = trunk[#trunk]
+      local own = {}
+      for _, side in ipairs({ -1, 1 }) do
+        local reach
+        if side < 0 then reach = k == 1 and top[1] - x0 - 0.1 or (xt - trunks[k - 1]) / 2 - 0.15
+        else reach = k == #trunks and xr - top[1] - 0.1 or (trunks[k + 1] - xt) / 2 - 0.15 end
+        if reach > 0.8 then
+          -- from inside the head, curving out and up onto the wire, then along it, knuckled
+          local y0 = top[2] - 0.55 * size
+          local pts = { { top[1] - side * 0.1 * size, y0 } }
+          local sag = layout.range(0.03, 0.1)
+          for i = 1, 18 do
+            local t = i / 18
+            local u = min(1, t * 2.6)
+            pts[#pts + 1] = { top[1] + side * reach * t, lerp(y0, yc, 1 - (1 - u) ^ 2.2) - sag * sin(t * 180 * RAD)
+              + 0.05 * size * sin((t * 900 + ph) * RAD) }
+          end
+          own[#own + 1] = { pts = pts, side = side }
+          arms[#arms + 1] = own[#own]
+        end
+      end
+      local tw = 1.1 * size
+      place(MID - 2, 0, 0, 0, function()
+        local r = rng.fork()
+        for _, arm in ipairs(own) do wood(r, arm.pts, 0.8 * size, 0.38 * size) end
+        wood(r, trunk, tw, 0.95 * size)
+      end)
     end
-    local tw = 1.1 * size
-    place(MID - 2, 0, 0, 0, function()
-      local r = rng.fork()
-      for _, arm in ipairs(arms) do wood(r, arm.pts, 0.8 * size, 0.38 * size) end
-      wood(r, trunk, tw, 0.95 * size)
-    end)
     -- the wires, the fruiting wire under the cordon and the catch wires above it
     place(MID + 1, 0, 0, 0, function()
       for _, y in ipairs({ yc - 0.08, wires[1], wires[2], wires[3] }) do
-        ink.moveto(col[1] - 0.3, y) ink.lineto(col[3] - 0.05, y + 0.01)
+        ink.moveto(col[1] - 0.3, y) ink.lineto(spill and xr + 0.25 or col[3] - 0.05, y + 0.01)
       end
       ink.stroke({ 0.52, 0.53, 0.55 }, 0.4, 0.85)
     end)
@@ -1220,7 +1243,7 @@ function M.page(g)
               a = 90 + lean + 4 * sin((len * 60 + sway) * RAD)
               x, y = x + 0.12 * cos(a * RAD), y + 0.12 * sin(a * RAD)
               len = len + 0.12
-              pts[#pts + 1] = { clamp(x, col[1] - 0.1, col[3] + 0.1), y }
+              pts[#pts + 1] = { clamp(x, col[1] - 0.1, max(col[3] + 0.1, xr + 0.2)), y }
             end
             if flop and grown >= 1 then                     -- over the top wire and down
               local fa, side = a, layout.chance(0.5) and 1 or -1
@@ -1249,12 +1272,12 @@ function M.page(g)
     end
     local pts = {}
     for i = 0, 60 do
-      local x = lerp(col[1] - 0.6, col[3] + 0.6, i / 60)
+      local x = lerp(col[1] - 0.6, max(col[3], xr) + 0.6, i / 60)
       pts[#pts + 1] = { x, by(x) }
     end
     local canes = braid(layout.fork(), pts, S)
     local poles = {}
-    for px = p0, col[3] + 0.3, D do
+    for px = p0, max(col[3], xr) + 0.3, D do
       if px > col[1] - 0.3 then poles[#poles + 1] = { px, by(px) + layout.range(15, 40) * S, layout.sym(0.04) } end
     end
     place(MID, 0, 0, 0, function()
@@ -1294,7 +1317,7 @@ function M.page(g)
     local buds = {}
     for _, cn in ipairs(canes) do
       for _, nd in ipairs(cn.nodes) do
-        if nd[1] > x0 and nd[1] < x1 and nd[4] > -0.2 then
+        if nd[1] > x0 and nd[1] < xr and nd[4] > -0.2 then
           buds[#buds + 1] = { nd[1], nd[2] + 0.3 * nd[3] }
         end
       end
@@ -1309,7 +1332,7 @@ function M.page(g)
         local arc, target = layout.range(10, 70), (yt - yb) * grown * layout.range(0.75, 1.1)
         local sx, sy = b[1], b[2]
         local spts, len = { { sx, sy } }, 0
-        while len < target and sx > col[1] - 0.3 and sx < col[3] + 0.3 do
+        while len < target and sx > col[1] - 0.3 and sx < max(col[3], xr) + 0.3 do
           local a = a0 - turn * arc * (len / target) ^ 2
           sx, sy = sx + 0.12 * cos(a * RAD), max(yg + 0.3, sy + 0.12 * sin(a * RAD))
           len = len + 0.12
@@ -1340,6 +1363,16 @@ function M.page(g)
     if not pulled then kept[#kept + 1] = it end
   end
   items = kept
+  -- under the text: what grows wholly behind it, out of the margin and above the space it
+  -- leaves, is not drawn
+  if spill then
+    kept = {}
+    for _, it in ipairs(items) do
+      local p = it.node or it.p or it.q
+      if not (p and p[1] > col[3] + 3 * size and p[2] > spill[4] + 3 * size) then kept[#kept + 1] = it end
+    end
+    items = kept
+  end
 
   -- 3. paint, from the back of the canopy to the front
   local function green(it)
@@ -1465,6 +1498,10 @@ function M.page(g)
   ink.layer(0)
   ink.poly({ { col[1] - 0.25, col[2] - 0.3 }, { col[3] + 0.3, col[2] - 0.3 }, { col[3] + 0.3, col[4] + 0.3 },
     { col[1] - 0.25, col[4] + 0.3 } }, true)
+  if spill then
+    ink.poly({ { spill[1], spill[2] - 0.3 }, { spill[3], spill[2] - 0.3 }, { spill[3], spill[4] },
+      { spill[1], spill[4] } }, true)
+  end
   ink.clip()
   ink.layer(99)
   ink.unclip()

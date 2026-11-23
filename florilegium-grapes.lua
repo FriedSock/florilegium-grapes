@@ -29,6 +29,10 @@ function M.geometry()
     g.textleft, g.textright = g.pw - g.textright, g.pw - g.textleft
   end
   g.colright = g.textleft - 0.4
+  if M.endpage == tex.count[0] then
+    local top = g.ph - inch - tex.voffset * SP_CM - cm("topmargin") - cm("headheight") - cm("headsep")
+    g.textend = top - M.endtotal * SP_CM
+  end
   g.colleft = M.width and math.max(0.3, g.colright - M.width) or 0.3
   if g.colright - g.colleft < M.MINWIDTH and not M.narrow then
     M.narrow = true
@@ -39,6 +43,9 @@ function M.geometry()
   end
   return g
 end
+
+-- \florilegiumgrapestextend: the page the text ends on, and how far down it the text reaches (sp)
+function M.textend(page, total) M.endpage, M.endtotal = page, total end
 
 -- a number the user wrote (\florilegiumgrapesseed, \florilegiumgrapesage): its value, or, when it is not
 -- a number, the default, with a warning in the log
