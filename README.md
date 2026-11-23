@@ -44,7 +44,7 @@ page and is drawn mirrored.
 
 ## The trenzado
 
-![six trenzado vines at harvest: pinot noir, saperavi, gewürztraminer, rkatsiteli, regent and johanniter](gallery/trenzado.png)
+![eight trenzado vines at harvest: pinot noir, saperavi, gewürztraminer, rkatsiteli, regent, johanniter, touriga nacional and vidiano](gallery/trenzado.png)
 
 *The same six varieties, the same pages, trained as trenzado (`pruning=trenzado`).*
 

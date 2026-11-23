@@ -484,23 +484,37 @@ local function panicle(r, sp, L, B, branches, ox, oy, oz, tilt, rb, want, mm)
 end
 -- rb the grape's half width, want how many grapes the variety's bunch holds
 -- v the variety's numbers: bloom, how thick its waxy bloom; alt and vary, a second color
--- its grapes may be any shade toward; spots, rusty flecks on its ripe grapes
-local function bunch(r, sp, L, c, bl, lx, ripe, rb, want, v)
+-- its grapes may be any shade toward; spots, rusty flecks on its ripe grapes; out, the side
+-- (1 right, -1 left) its stalk reaches out to from the shoot
+local function bunch(r, sp, L, c, bl, lx, ripe, rb, want, v, out)
   local bloom, alt, vary, spots = v.bloom or 0.14, v.alt, v.vary or 0, v.spots
   local dark = sp.berrytone == "dark"
   local B = {}
   -- the peduncle, bare from the node to the first branch: 16 to 17 mm on a tight bunch of
   -- 8 to 12 cm (Shavrukov et al. 2004), a little under a fifth of it; 5 to 6 mm thick
   local ped = 0.18 * L * r.range(0.75, 1.35)
+  -- it is stiff, and the bunch's weight bends it over gradually: it carries on outward from
+  -- the node, starting a quarter of the way down from level, and is still leaning out a little
+  -- where the branches begin; the bunch hangs on along that lean
+  local pdx, pdy = dir(-25)
+  local qdx, qdy = dir(-70)
+  local P = { { 0, 0 }, { out * 0.45 * ped * pdx, 0.45 * ped * pdy },
+    { out * (0.55 - 0.3 * qdx) * ped, (-0.8 - 0.3 * qdy) * ped }, { out * 0.55 * ped, -0.8 * ped } }
+  local function along(t)
+    local u = 1 - t
+    local a, b, c_, d = u * u * u, 3 * u * u * t, 3 * u * t * t, t * t * t
+    return a * P[1][1] + b * P[2][1] + c_ * P[3][1] + d * P[4][1], a * P[1][2] + b * P[2][2] + c_ * P[3][2] + d * P[4][2]
+  end
   local mm = 2 * rb / v.mm                       -- cm on the page for a real mm
   local stalks = {}
   local function add(list) for _, s_ in ipairs(list) do stalks[#stalks + 1] = s_ end end
-  local tilt = r.sym(10)
+  local tilt = out * (12 + r.sym(8))
   local branches = {}
-  local main = panicle(r, sp, L, B, branches, 0, -ped, 0, tilt, rb, want, mm)
+  local main = panicle(r, sp, L, B, branches, P[4][1], P[4][2], 0, tilt, rb, want, mm)
   add(main)
   local arm = r.chance(0.5) and 1 or -1
-  local wx, wy = arm * 0.22 * L, -ped * 0.55
+  local fx, fy = along(0.55)
+  local wx, wy = fx + arm * 0.22 * L, fy
   if sp.bunch == "winged" then
     add((panicle(r, sp, 0.45 * L, B, branches, wx, wy - 0.05 * L, r.sym(0.1) * L, arm * r.range(15, 30), rb, floor(0.3 * want),
       mm)))
@@ -537,12 +551,16 @@ local function bunch(r, sp, L, c, bl, lx, ripe, rb, want, v)
       stalks[#stalks + 1] = { px, py, pz, g[1], g[2], g[3], 0.9 * BP }
     end
   end
-  -- the stalks: the peduncle from the node, the wing's arm, then the bunch's own
+  -- the stalks: the peduncle from the node, the wing's arm or a tendril, then the bunch's own.
+  -- A bunch is a tendril that flowers, and its peduncle often forks: the fork grows into a
+  -- wing, a small bunch of its own, or stays a bare tendril, curving out and up
   local sc = mix(C.shoot, C.cane, 0.45)
-  ink.moveto(0, 0) ink.curveto(r.sym(0.03) * L, -0.3 * ped, 0, -0.65 * ped, 0, -ped) ink.stroke(sc, 5.5 * BP, 1)
-  if sp.bunch == "winged" then
-    ink.moveto(0, -0.55 * ped) ink.lineto(wx, wy - 0.05 * L) ink.stroke(sc, 3 * BP, 1)
+  ink.moveto(0, 0) ink.curveto(P[2][1], P[2][2], P[3][1], P[3][2], P[4][1], P[4][2]) ink.stroke(sc, 5.5 * BP, 1)
+  ink.moveto(fx, fy)
+  if sp.bunch == "winged" then ink.lineto(wx, wy - 0.05 * L) else
+    ink.curveto(fx + out * 0.06 * L, fy + 0.05 * ped, fx + out * 0.1 * L, fy + 0.15 * ped, fx + out * 0.11 * L, fy + 0.3 * ped)
   end
+  ink.stroke(sc, 3 * BP, 1)
   table.sort(stalks, function(a, b) return a[3] + a[6] < b[3] + b[6] end)
   for _, s_ in ipairs(stalks) do
     ink.moveto(s_[1], s_[2]) ink.lineto(s_[4], s_[5]) ink.stroke(sc, s_[7], 0.95)
@@ -1103,8 +1121,13 @@ function M.page(g)
         -- the bunch at its real size, on the leaf's scale (a midrib about 11 cm long)
         local young = age < 0.45
         local Lb = FRUIT * v.cm * S * layout.range(0.85, 1.1) * (young and 0.5 or 1)
+        -- its stalk leaves the node on the tendril's side, but nearly level, rising only a
+        -- third as steeply, as the bunch's weight holds it down
         local ox, oy = dir(oa)
-        local tx, ty = p[1] + 0.18 * ox, p[2] + 0.18 * oy
+        local out = ox >= 0 and 1 or -1
+        local rise = 0.3 * deg(abs(ox), oy)
+        local bx, by = dir(out > 0 and rise or 180 - rise)
+        local tx, ty = p[1] + 0.18 * bx, p[2] + 0.18 * by
         -- thinned, as a grower thins them, where it would crowd one already hanging
         local crowded = false
         for _, o in ipairs(items) do
@@ -1113,7 +1136,7 @@ function M.page(g)
         end
         if not crowded then
           hung[#hung + 1] = p[2]
-          items[#items + 1] = { kind = "bunch", node = p, t = { tx, ty }, L = Lb, z = layout.range(-0.5, 0.9),
+          items[#items + 1] = { kind = "bunch", node = p, t = { tx, ty }, out = out, L = Lb, z = layout.range(-0.5, 0.9),
             rb = FRUIT * v.mm / 20 * S * (young and 0.6 or 1) }
         end
       elseif node >= 6 and (node - 6) % 3 < 2 then
@@ -1398,11 +1421,15 @@ function M.page(g)
       counts.bunch = counts.bunch + 1
       local n, t = it.node, it.t
       place(layer(it.z), 0, 0, 0, function()
-        ink.moveto(n[1], n[2]) ink.curveto(lerp(n[1], t[1], 0.5), lerp(n[2], t[2], 0.5) + 0.05, t[1], t[2] + 0.04, t[1], t[2])
-        ink.stroke(mix(C.shoot, C.cane, 0.45), 1.0, 1)
+        -- out from the node, then bending a little down into the bunch's own stalk, as thick as
+        -- it (5.5 mm, on the bunch's scale)
+        local ex, ey = dir(-20)
+        ink.moveto(n[1], n[2])
+        ink.curveto(lerp(n[1], t[1], 0.4), lerp(n[2], t[2], 0.4), t[1] - it.out * 0.06 * ex, t[2] - 0.06 * ey, t[1], t[2])
+        ink.stroke(mix(C.shoot, C.cane, 0.45), 5.5 * 2 * it.rb / v.mm * 28.3465, 1)
         ink.push() ink.translate(t[1], t[2])
         counts.grape = counts.grape + bunch(rng.fork(), sp, it.L, v.ink or BERRY[sp.berrytone], BLOOM[sp.berrytone], lx,
-          ripe, it.rb, v.n, v)
+          ripe, it.rb, v.n, v, it.out)
         ink.pop()
       end)
     elseif k == "tip" then

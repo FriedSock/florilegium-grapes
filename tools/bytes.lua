@@ -40,7 +40,7 @@ local parts = {
   { "leaves (all)", { off(LEAF) } },
   { "  of which hairs", { { "if fuzz > 0.05 then", "if false then" }, { "if fuzz > 0.25 then", "if false then" } } },
   { "  of which side veins", { { SIDE, "" } } },
-  { "bunches (all)", { off("local function bunch(r, sp, L, c, bl, lx, ripe, rb, want, v)", "0") } },
+  { "bunches (all)", { off("local function bunch(r, sp, L, c, bl, lx, ripe, rb, want, v, out)", "0") } },
   { "  of which bloom powder", { { "if wax > 0.06 then", "if false then" } } },
   { "trunk and cordon", { off("local function wood(r, pts, w0, w1)") } },
   { "tendrils", { off("local function tendril(r, L, c)") } },

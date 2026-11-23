@@ -1,0 +1,10 @@
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\newcommand\margin[3]{\begin{tabular}{@{}c@{}}\includegraphics[page=#1,trim=0 8mm 143mm 0,clip,width=#3]{../showcase.pdf}\\[1mm]\small #2\end{tabular}}
+\begin{document}
+\setbox0\hbox{\margin{1}{Pinot Noir}{4.2cm}\hspace{3mm}\margin{2}{Saperavi}{4.2cm}\hspace{3mm}\margin{3}{Gewürztraminer}{4.2cm}\hspace{3mm}\margin{4}{Rkatsiteli}{4.2cm}\hspace{3mm}\margin{5}{Regent}{4.2cm}\hspace{3mm}\margin{6}{Johanniter}{4.2cm}\hspace{3mm}\margin{7}{Touriga Nacional}{4.2cm}\hspace{3mm}\margin{8}{Vidiano}{4.2cm}}
+\pagewidth=\dimexpr\wd0+8mm\relax
+\pageheight=\dimexpr\ht0+\dp0+8mm\relax
+\shipout\vbox{\kern\dimexpr4mm-1in\relax\hbox{\kern\dimexpr4mm-1in\relax\box0}}
+\end{document}
