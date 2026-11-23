@@ -4,13 +4,13 @@ A grapevine that grows in the margin of a page. This is a fork of Kevin Raymond'
 [florilegium](https://github.com/kevinraymond/florilegium), the LuaLaTeX package that grows
 Delft-blue flowers in the margin of a page. The fork keeps only one plant, and draws it properly:
 a grapevine pruned and trained as a vineyard trains it, spur-pruned up the margin or braided low
-across it in Tenerife's trenzado, in six varieties, through the seasons. None of it is an image
+across it in Tenerife's trenzado, in eight varieties, through the seasons. None of it is an image
 file. Every cane, leaf, tendril and grape is a curve computed while the page is made, so every
 page grows a vine of its own.
 
 ![eight grapevines at harvest: pinot noir, saperavi, gewürztraminer, rkatsiteli, regent, johanniter, touriga nacional and vidiano](gallery/varieties.png)
 
-*Six varieties at harvest, each the margin of a page of `showcase.tex`.*
+*Eight varieties at harvest, each the margin of a page of `showcase.tex`.*
 
 [The vine](#the-vine) · [the trenzado](#the-trenzado) · [the bunches](#the-bunches) ·
 [the leaves](#the-leaves) · [the seasons](#the-seasons) · [the varieties](#the-varieties) ·
@@ -46,7 +46,7 @@ page and is drawn mirrored.
 
 ![eight trenzado vines at harvest: pinot noir, saperavi, gewürztraminer, rkatsiteli, regent, johanniter, touriga nacional and vidiano](gallery/trenzado.png)
 
-*The same six varieties, the same pages, trained as trenzado (`pruning=trenzado`).*
+*The same eight varieties, the same pages, trained as trenzado (`pruning=trenzado`).*
 
 The *cordón trenzado*, the braided cordon, is the old training of the Valle de La Orotava in
 Tenerife, found nowhere else. Each year's cane is plaited onto the old ones, so the cordon grows
@@ -123,6 +123,8 @@ spreads the year over the document, spring on the first page and autumn on the l
 | Rkatsiteli | five lobes, downy | fairly dense, cone-shaped, sometimes shouldered | large, yellow-green, flecked with rust |
 | Regent | three lobes, cut medium-deep | dense, cylindrical or cone-shaped | large, round, blue-black |
 | Johanniter | five lobes, nearly smooth | dense, cylindrical | golden, flecked with rust |
+| Touriga Nacional | small, five lobes, deeply cut | small, medium-dense, cylindrical or cone-shaped | blue-black |
+| Vidiano | five lobes | medium to large, fairly dense, cone-shaped | yellow-green, thick-skinned |
 
 The descriptions follow the varieties' published ampelography where it could be found, and the
 colours and shapes were checked against photographs of bunches on the vine.
@@ -184,8 +186,10 @@ code throughout, with no generative image models.
 - The random numbers come from [mulberry32](https://gist.github.com/tommyettinger/46a874533244883189143505d203312c),
   Tommy Ettinger's generator, dedicated to the public domain (CC0).
 - The varieties' leaves and bunches follow the ampelography of German and English Wikipedia
-  (Pinot noir, Regent, Johanniter, Gewürztraminer, Saperavi) and Georgian descriptions of
-  Rkatsiteli; the colours and shapes were checked against photographs on Wikimedia Commons.
+  (Pinot noir, Regent, Johanniter, Gewürztraminer, Saperavi), Georgian descriptions of
+  Rkatsiteli, Vine to Wine Circle's ampelography of Touriga Nacional and Yiannis Karakasis MW's
+  description of Vidiano (whose leaf follows typical values, as no description of it was found);
+  the colours and shapes were checked against photographs on Wikimedia Commons.
 - The bunch's stalks follow Y. N. Shavrukov, I. B. Dry and M. R. Thomas, *Inflorescence and
   bunch architecture development in Vitis vinifera L.* (Australian Journal of Grape and Wine
   Research 10, 2004): 20 to 38 branches on the rachis, the gaps between them longest at the
