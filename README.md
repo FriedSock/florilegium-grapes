@@ -8,7 +8,7 @@ across it in Tenerife's trenzado, in eight varieties, through the seasons. None 
 file. Every cane, leaf, tendril and grape is a curve computed while the page is made, so every
 page grows a vine of its own.
 
-![eight grapevines at harvest: pinot noir, saperavi, gewürztraminer, rkatsiteli, regent, johanniter, touriga nacional and vidiano](gallery/varieties.png)
+![six grapevines at harvest: saperavi, gewürztraminer, rkatsiteli, regent, johanniter and touriga nacional](gallery/varieties.png)
 
 *Eight varieties at harvest, each the margin of a page of `showcase.tex`.*
 
@@ -44,7 +44,7 @@ page and is drawn mirrored.
 
 ## The trenzado
 
-![eight trenzado vines at harvest: pinot noir, saperavi, gewürztraminer, rkatsiteli, regent, johanniter, touriga nacional and vidiano](gallery/trenzado.png)
+![six trenzado vines at harvest: saperavi, gewürztraminer, rkatsiteli, regent, johanniter and touriga nacional](gallery/trenzado.png)
 
 *The same eight varieties, the same pages, trained as trenzado (`pruning=trenzado`).*
 
