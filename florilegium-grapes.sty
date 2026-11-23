@@ -19,6 +19,10 @@
 %%                                       spur (the default) or trenzado
 %%   \florilegiumgrapespruning{style}           the pruning from the page this is set on
 %%   \florilegiumgrapesvine{variety}            the variety from the page this is set on
+%%   \usepackage[width=5cm]{florilegium-grapes}  how much of the margin the vine takes, from
+%%                                       the text out (default: all of it; below about
+%%                                       4.4cm its leaves overhang the column)
+%%   \florilegiumgrapeswidth{dim}               the width from the page this is set on
 %%   \florilegiumgrapesage{a}                   the season of the following pages: 0 spring,
 %%                                       0.5 summer, 1 autumn (default: late summer)
 %%   \def\florilegiumgrapesseed{7}               before \usepackage: a fixed seed (any positive
@@ -68,6 +72,8 @@
 \def\florilegiumgrapes@set@vine#1{\def\florilegiumgrapes@vine{#1}}
 \def\florilegiumgrapes@pruning{}
 \def\florilegiumgrapes@set@pruning#1{\def\florilegiumgrapes@pruning{#1}}
+\def\florilegiumgrapes@width{}
+\def\florilegiumgrapes@set@width#1{\def\florilegiumgrapes@width{#1}}
 \ProcessOptions\relax
 \ifdefined\florilegiumgrapesseed\else\def\florilegiumgrapesseed{}\fi
 
@@ -76,6 +82,8 @@
   \directlua{florilegiumgrapes.vine = "\luaescapestring{\florilegiumgrapes@vine}"}\fi
 \ifx\florilegiumgrapes@pruning\@empty\else
   \directlua{florilegiumgrapes.pruning = "\luaescapestring{\florilegiumgrapes@pruning}"}\fi
+\newcommand\florilegiumgrapeswidth[1]{\directlua{florilegiumgrapes.width = \number\dimexpr#1\relax * 2.54 / (72.27 * 65536)}}
+\ifx\florilegiumgrapes@width\@empty\else\florilegiumgrapeswidth{\florilegiumgrapes@width}\fi
 \newcommand\florilegiumgrapespruning[1]{\directlua{florilegiumgrapes.pruning = "\luaescapestring{#1}"}}
 \newcommand\florilegiumgrapesvine[1]{\directlua{florilegiumgrapes.vine = "\luaescapestring{#1}"}}
 \newcommand\florilegiumgrapesage[1]{\directlua{florilegiumgrapes.age = florilegiumgrapes.number("\string\\florilegiumgrapesage", "\luaescapestring{#1}", nil)}}

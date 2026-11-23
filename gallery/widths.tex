@@ -1,0 +1,21 @@
+% !TEX program = lualatex
+% The vine in columns of different widths, from the text out: built by gallery/widths.sh
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[vine=pinot]{florilegium-grapes}
+\usepackage{lipsum}
+\usepackage[a4paper,left=30mm,right=20mm,top=32mm,bottom=30mm]{geometry}
+\newcommand\width[2]{\newpage\florilegiumgrapeswidth{#1}\section*{#2}\lipsum[1-3]}
+\begin{document}
+\width{3cm}{\texttt{width=3cm}}
+\newgeometry{left=4cm}
+\width{4cm}{\texttt{width=4cm}}
+\width{4.4cm}{\texttt{width=4.4cm}}
+\newgeometry{left=5cm}
+\width{5cm}{\texttt{width=5cm}}
+\newgeometry{left=6cm}
+\width{\paperwidth}{width=6cm}
+
+\newgeometry{left=10cm}
+\width{6cm}{width=6cm but margin=10cm}
+\end{document}

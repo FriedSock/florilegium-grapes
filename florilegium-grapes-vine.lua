@@ -970,7 +970,7 @@ function M.page(g)
   local grown = clamp(0.25 + 1.5 * age, 0.25, 1)  -- how far the shoots have grown
   local white = sp.berrytone == "pale" or v.white
   -- the margin's column, from the paper's edge to the text, from the foot of the page to its top
-  local col = { 0.3, 0.45, g.colright, g.ph - 0.5 }
+  local col = { g.colleft or 0.3, 0.45, g.colright, g.ph - 0.5 }
   local x0, x1 = col[1] + 0.15, col[3] - 0.1
   local yg, yt = col[2] + 0.05, col[4] - 0.35
   local cw, H = x1 - x0, yt - yg

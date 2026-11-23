@@ -14,6 +14,8 @@ local function cm(name) return tex.dimen[name] * SP_CM end
 -- two-sided document), the layout is made for the mirrored page and drawn reflected
 -- (g.mirror; ink.page_transform)
 M.twoside = false                             -- \if@twoside, set at each shipout
+M.width = nil                                 -- width=, \florilegiumgrapeswidth: the column's width in cm, from the text out; nil the whole margin
+M.MINWIDTH = 4.4                              -- the narrowest column the vine is drawn small enough for
 function M.geometry()
   local inch = 2.54
   local even = M.twoside and tex.count[0] % 2 == 0
@@ -27,6 +29,14 @@ function M.geometry()
     g.textleft, g.textright = g.pw - g.textright, g.pw - g.textleft
   end
   g.colright = g.textleft - 0.4
+  g.colleft = M.width and math.max(0.3, g.colright - M.width) or 0.3
+  if g.colright - g.colleft < M.MINWIDTH and not M.narrow then
+    M.narrow = true
+    if luatexbase and luatexbase.module_warning then
+      luatexbase.module_warning("florilegium-grapes", string.format(
+        "the vine's column is %.1f cm wide; below %.1f cm its leaves and bunches overhang it", g.colright - g.colleft, M.MINWIDTH))
+    end
+  end
   return g
 end
 

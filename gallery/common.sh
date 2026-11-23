@@ -11,12 +11,14 @@ latex() {
 
 showcase() { latex . showcase.tex; }
 
-trenzado_showcase() {
-  lualatex -interaction=nonstopmode -halt-on-error -output-directory=gallery gallery/trenzado-showcase.tex >/dev/null || {
-    tail -20 gallery/trenzado-showcase.log
+vined() {
+  lualatex -interaction=nonstopmode -halt-on-error -output-directory=gallery "gallery/$1.tex" >/dev/null || {
+    tail -20 "gallery/$1.log"
     exit 1
   }
 }
+
+trenzado_showcase() { vined trenzado-showcase; }
 
 composite() { latex gallery "$1.tex"; }
 

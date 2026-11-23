@@ -9,3 +9,4 @@ scratch/
 *.png
 !gallery/*.png
 *.pdf
+!gallery/widths.pdf
