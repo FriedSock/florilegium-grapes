@@ -3,8 +3,8 @@
 A grapevine that grows in the margin of a page. This is a fork of Kevin Raymond's
 [florilegium](https://github.com/kevinraymond/florilegium), the LuaLaTeX package that grows
 Delft-blue flowers in the margin of a page. The fork keeps only one plant, and draws it properly:
-a grapevine pruned and trained as a vineyard trains it, spur-pruned up the margin or braided low
-across it in Tenerife's trenzado, in eight varieties, through the seasons. None of it is an image
+a grapevine pruned and trained as a vineyard trains it, spur- or cane-pruned up the margin or
+braided low across it in Tenerife's trenzado, in eight varieties, through the seasons. None of it is an image
 file. Every cane, leaf, tendril and grape is a curve computed while the page is made, so every
 page grows a vine of its own.
 
@@ -12,7 +12,7 @@ page grows a vine of its own.
 
 *Eight varieties at harvest, each the margin of a page of `showcase.tex`.*
 
-[The vine](#the-vine) · [the trenzado](#the-trenzado) · [the bunches](#the-bunches) ·
+[The vine](#the-vine) · [the canes](#the-canes) · [the trenzado](#the-trenzado) · [the bunches](#the-bunches) ·
 [the leaves](#the-leaves) · [the seasons](#the-seasons) · [the varieties](#the-varieties) ·
 [quick start](#quick-start) · [Kevin's original repository](https://github.com/kevinraymond/florilegium)
 
@@ -25,11 +25,20 @@ shoot positioned trellis, seen from the side of the row, with the margin as its 
 
 - **The trunk** rises from the foot of the page to the fruiting wire, a third of the way up, and
   divides into the **cordon**, two barked, knotted arms laid along the wire.
+- **Old wood** swells where it has been pruned year after year: at the head of the trunk, at
+  each spur position and at each arm's end, where it was stopped. Each knob is lumpy and
+  scarred, its bark running into it in strands. The old cuts on its face are ringed with callus
+  and sometimes rotted hollow, kept to one side of it, as pruners keep their wounds to one side
+  so the sap runs on along the other. The stubs of old spurs and canes stand out of it, dead and
+  grey, cut a finger's length above the living wood so that the wood drying out behind the cut
+  stays in the stub.
 - **Spurs** sit along the cordon, each a stub of last year's cane cut back to two buds, its
-  pruning cut showing. Each leans its own way, and the two
-  shoots from its buds splay apart.
+  pruning cut showing, rising from its knuckle a little higher than the spurs cut back there
+  before it. Each leans its own way, and the two shoots from its buds splay apart.
 - **Shoots** grow from the buds, trained straight up between the catch wires, thick at the base,
-  their nodes swollen, and hedged level at the top, where some flop over.
+  their nodes swollen, and hedged level at the top, where some flop over. Each stands a little
+  nearer or farther in the canopy than its neighbours, and its bunches hang near its own depth,
+  so a bunch hides the shoots behind its own and is hidden by those in front of it.
 - At every node, a **leaf** on a long stalk, alternately left and right, with the dormant bud in
   its axil. Opposite the leaf: nothing at the first two nodes, a **bunch** at one or two of the
   third, fourth and fifth, then a forked, coiling **tendril** at two nodes in every three. That
@@ -41,6 +50,28 @@ shoot positioned trellis, seen from the side of the row, with the margin as its 
 
 The vine grows in the wider side margin, and in a two-sided document it changes sides with the
 page and is drawn mirrored.
+
+## The canes
+
+![six cane-pruned vines at harvest: saperavi, gewürztraminer, rkatsiteli, regent, johanniter and touriga nacional](gallery/cane.png)
+
+*The same varieties, cane pruned (`pruning=cane`).*
+
+Cane pruning (the double Guyot) uses the same trellis and the same upright shoots, but keeps no
+cordon. Each winter the trunk is cut back to its head, a hand's breadth or two under the
+fruiting wire, and left with two of last year's canes and a renewal spur:
+
+- **The head** is a fist of old wood, knobbed and scarred by years of the same cuts, the grey
+  stubs of old canes standing out of its top, all to one side. Last year's spurs come out of it,
+  each now carrying its cane.
+- **The canes**, one each way and a finger thick, leave the head rising, bow over and are bent
+  down onto the fruiting wire, then run along it to where they were cut, their nodes swollen
+  and their cut ends showing. They are smoother and paler than the trunk's bark: one-year wood.
+- **Shoots** grow from nearly every bud along the canes, closer together than a spur vine's,
+  and are trained straight up between the catch wires as the spur vine's are.
+- **The renewal spur** at the head, two buds, grows the shoots that will be laid down as next
+  year's canes when this year's are cut away. They bear no fruit: the grower takes off any
+  bunches they set, so they carry tendrils where a fruiting shoot hangs its bunches.
 
 ## The trenzado
 
@@ -148,7 +179,7 @@ and `florilegium-grapes-vine.lua` beside your document (or upload them to an
 | option or command | what it does |
 |---|---|
 | `vine=<variety>` | the variety, for the whole document (default `pinot`) |
-| `pruning=<style>` | how the vine is pruned and trained: `spur` (the default) or `trenzado` (see [the trenzado](#the-trenzado)) |
+| `pruning=<style>` | how the vine is pruned and trained: `spur` (the default), `cane` (see [the canes](#the-canes)) or `trenzado` (see [the trenzado](#the-trenzado)) |
 | `\florilegiumgrapespruning{style}` | the pruning from the page this is set on |
 | `aging` | the vine ages from spring on the first page to autumn on the last (two runs) |
 | `\florilegiumgrapesvine{variety}` | the variety from the page this is set on |
@@ -203,7 +234,11 @@ code throughout, with no generative image models.
   literature on grapevine inflorescence architecture (the rachis, its spiral of branches and
   the pedicels, as in J. Exp. Bot. 70, 2019).
 - The training follows Penn State and University of Georgia extension guidance on
-  spur-pruned, vertically shoot-positioned vines. The trenzado follows the Ayuntamiento de La
+  spur- and cane-pruned, vertically shoot-positioned vines; the cane-pruned head, its renewal
+  spur and the canes' bow onto the wire follow the RHS's guidance on Guyot pruning and Jamie
+  Goode's [cane pruning in pictures](https://wineanorak.com/?p=16286); the old wood's long stubs
+  and its wounds kept to one side follow Simonit & Sirch's pruning, as described by
+  [GuildSomm](https://www.guildsomm.com/public_content/features/articles/b/sarah-bray/posts/pruning-for-sap-flow). The trenzado follows the Ayuntamiento de La
   Orotava and the Valle de La Orotava denomination of origin's description of the
   [cordón trenzado](https://www.laorotava.es/sites/default/files/documentos/cordon_trenzado_tradicional_o_cordon_trenzado_multiple.pdf)
   and photographs of the braided vines of Suertes del Marqués published by

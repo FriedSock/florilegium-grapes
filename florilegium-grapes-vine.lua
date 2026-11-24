@@ -760,6 +760,123 @@ local function band(pts, w0, w1, c)
   ink.smooth(shape, true) ink.stroke(scale(c, 0.5), 0.25, 0.8)
   return L, R, s, total
 end
+-- ---------------------------------------------------------------- old wood
+-- Where a vine has been pruned in the same place year after year (the head of its trunk, each
+-- spur position along a cordon, a cordon's end), the wood swells into a knob. Every cut leaves
+-- a wound the bark rolls in over: a ring of callus round a face of pale dead wood, which may
+-- rot to a hollow. The stubs of old canes and spurs are left standing, dead and grey, a finger's
+-- length above the living wood, as growers leave them so that the wood drying out behind a cut
+-- (its desiccation cone) stays in the stub. Pruners keep the wounds to one side, so the sap runs
+-- on unhindered along the other
+local DEAD, HEART = { 0.5, 0.46, 0.41 }, { 0.66, 0.58, 0.45 }
+
+local function ellipse(x, y, rx, ry, rot)
+  local pts = {}
+  for i = 0, 11 do
+    local a = i / 12 * 2 * pi
+    local px, py = rx * cos(a), ry * sin(a)
+    pts[#pts + 1] = { x + px * cos(rot) - py * sin(rot), y + px * sin(rot) + py * cos(rot) }
+  end
+  ink.smooth(pts, true)
+end
+
+-- a cut's face, seen at a slant: rx across the cut wood (along rot, in radians), ry
+-- foreshortened; its growth rings, the callus rolling in round it, now and then rotted hollow
+local function cutface(r, x, y, rx, ry, rot, rotten, face)
+  ellipse(x, y, 1.25 * rx, 1.35 * ry, rot) ink.fill(mix(C.bark, C.barklight, 0.6))
+  ellipse(x, y, rx, ry, rot) ink.fill(face or HEART)
+  ellipse(x, y, 0.55 * rx, 0.55 * ry, rot) ink.stroke(scale(face or HEART, 0.8), 0.3, 0.6)
+  if rotten then ellipse(x + r.sym(0.15 * rx), y + r.sym(0.15 * ry), 0.45 * rx, 0.45 * ry, rot) ink.fill(C.barkdark, 0.85) end
+  ellipse(x, y, rx, ry, rot) ink.stroke(C.barkdark, 0.3, 0.8)
+end
+
+-- a knob of old wood at x, y, about R in radius and o.ry times that high, lit from the upper
+-- left (lx: the light's side), o.size the page's scale. o.stubs: what stands out of it, each
+-- { a = its angle, len, w, live }: a dead stub of an old cane or spur, cut, or a live one,
+-- last year's wood carrying this year's; the knob bulges toward each. o.scars: how many flush cuts on its face, toward
+-- o.wound's side. o.join: the angle the wood it grows from comes in at (below, by default),
+-- where it has no edge of its own; o.rim: from and to which angles it has one (by default, all
+-- the way round but there). Returns where each stub ends, and the knob's edge (at(a, f):
+-- f of the way out from its middle at angle a, in radians)
+local function knob(r, x, y, R, lx, o)
+  local ry, stubs = o.ry or 1, o.stubs or {}
+  local bumps = {}
+  for _, st in ipairs(stubs) do bumps[#bumps + 1] = { st.a * RAD, 0.25, 0.5 } end
+  for _ = 1, 5 do bumps[#bumps + 1] = { r.range(0, 2 * pi), r.range(0.06, 0.2), r.range(0.25, 0.7) } end
+  local ph1, ph2 = r.range(0, 2 * pi), r.range(0, 2 * pi)
+  local function rad(a)
+    local k = 1 + 0.07 * sin(3 * a + ph1) + 0.04 * sin(7 * a + ph2)
+    for _, b in ipairs(bumps) do
+      local d = (a - b[1] + pi) % (2 * pi) - pi
+      k = k + b[2] * math.exp(-(d / b[3]) ^ 2)
+    end
+    return R * k
+  end
+  local function at(a, f)
+    local rr = rad(a) * (f or 1)
+    return x + rr * cos(a), y + ry * rr * sin(a)
+  end
+  local tips = {}
+  for i, st in ipairs(stubs) do
+    local ca, sa = dir(st.a)
+    local sx, sy = at(st.a * RAD)
+    local ex, ey = sx + ca * st.len, sy + sa * st.len
+    local bx, by = lerp(x, sx, 0.4), lerp(y, sy, 0.4)
+    band({ { bx, by }, { lerp(bx, ex, 0.5), lerp(by, ey, 0.5) }, { ex, ey } }, 1.3 * st.w, st.w,
+      st.live and mix(C.bark, C.cane, 0.5) or DEAD)
+    if not st.live then
+      -- weathered and split along its grain
+      ink.moveto(lerp(sx, ex, 0.1) - 0.15 * st.w * sa, lerp(sy, ey, 0.1) + 0.15 * st.w * ca)
+      ink.lineto(lerp(sx, ex, 0.85) - 0.1 * st.w * sa, lerp(sy, ey, 0.85) + 0.1 * st.w * ca)
+      ink.stroke(scale(DEAD, 0.55), 0.3, 0.7)
+      cutface(r, ex, ey, 0.5 * st.w, 0.22 * st.w, (st.a + 90 + r.sym(15)) * RAD, r.chance(0.3), mix(HEART, DEAD, 0.4))
+    end
+    tips[i] = { ex, ey }
+  end
+  local shape = {}
+  for i = 0, 23 do shape[#shape + 1] = { at(i / 24 * 2 * pi) } end
+  ink.smooth(shape, true) ink.fill(C.bark)
+  -- rounded, so shaded on the side away from the light and lit on the side toward it
+  local away = math.atan(-1, lx)
+  local function crescent(mid, depth, c, op)
+    local pts = {}
+    for i = 0, 12 do pts[#pts + 1] = { at(mid + (i / 12 - 0.5) * 3.2) } end
+    for i = 12, 0, -1 do
+      local t = i / 12 - 0.5
+      pts[#pts + 1] = { at(mid + t * 3.2, 1 - depth * cos(t * pi)) }
+    end
+    ink.smooth(pts, true) ink.fill(c, op)
+  end
+  crescent(away, 0.4, scale(C.bark, 0.6), 0.65)
+  crescent(away + pi, 0.25, C.barklight, 0.35)
+  -- its bark in strands, running in from the wood it grows from and on into each stub, or
+  -- over its top, swinging round its middle as grain swings round a knot
+  local join = (o.join or -90) * RAD
+  local ends = { join + pi }
+  for _, st in ipairs(stubs) do ends[#ends + 1] = st.a * RAD end
+  for k = 1, max(6, floor(22 * R / o.size)) do
+    local a0, a1 = join + r.sym(1.2), ends[1 + floor(r.u() * #ends)] + r.sym(0.3)
+    local da, deep = (a1 - a0 + pi) % (2 * pi) - pi, r.range(0.15, 0.75)
+    local pts = {}
+    for i = 0, 5 do
+      local t = i / 5
+      pts[#pts + 1] = { at(a0 + da * t, 0.97 - deep * sin(pi * t)) }
+    end
+    ink.smooth(pts, false)
+    if k % 2 == 0 then ink.stroke(C.barklight, r.range(0.3, 0.6), 0.5) else ink.stroke(C.barkdark, r.range(0.35, 0.8), 0.65) end
+  end
+  local nscar = o.scars or 0
+  for j = 1, nscar do
+    local cx, cy = at(((o.wound or 1) > 0 and 0 or pi) + (j - (nscar + 1) / 2) * 1.1 + r.sym(0.3), r.range(0.4, 0.7))
+    local rx = r.range(0.1, 0.18) * R
+    cutface(r, cx, cy, rx, rx * r.range(0.45, 0.75), r.range(0, pi), r.chance(0.4), mix(HEART, C.bark, 0.35))
+  end
+  -- its edge, left open where it grows out of the wood below it
+  local rim, from, to = {}, o.rim and o.rim[1] * RAD or join + 0.35 * pi, o.rim and o.rim[2] * RAD or join + 1.65 * pi
+  for i = 0, 40 do rim[#rim + 1] = { at(lerp(from, to, i / 40)) } end
+  ink.smooth(rim, false) ink.stroke(C.barkdark, 0.35, 0.8)
+  return tips, at
+end
 -- ---------------------------------------------------------------- the growing tip
 -- along +x from the origin, L long, the stem w thick where it starts: a shoot that is still
 -- growing ends in a soft tip, not a cut. Its last few centimetres nod over in a hook, and the
@@ -959,6 +1076,8 @@ function M.page(g)
   local rng = ink.rng(g.seed * 7919 + 811)
   local layout = rng.fork()
   local laterals = ink.rng(g.seed * 7919 + 812)
+  local knobs = ink.rng(g.seed * 7919 + 813)
+  local depths = ink.rng(g.seed * 7919 + 814)
   ink.set_transform(ink.page_transform(g.mirror and g.pw))
   local lx = g.mirror and -1 or 1                -- the light's side in layout x: the page's upper left
   local sp = vine(g.vine or "pinot", g.docseed or 0)
@@ -1013,7 +1132,7 @@ function M.page(g)
     items[#items + 1] = { kind = "tip", node = b, a = deg(b[1] - a[1], b[2] - a[2]), L = L, w = w, z = z }
   end
 
-  local function lateral(node, stem_angle, side)
+  local function lateral(node, stem_angle, side, zs)
     local r = laterals
     -- it grows from flowering (age 0.3) to its full length by midsummer (0.6), already a third
     -- grown when it first shows; two to four leaves, fewer early on
@@ -1028,7 +1147,7 @@ function M.page(g)
     -- step along it turns an eighth of the way back to straight up
     local up, bend, steps_per_internode, tip_steps = 90, 0.12, 3, 2
     local heading = stem_angle - side * r.range(35, 55)
-    local depth = r.sym(0.6)
+    local depth = zs + r.sym(0.45)
     local pts, at = { node }, node
     for _ = 1, steps_per_internode * leaf_count + tip_steps do
       heading = heading + bend * (up - heading)
@@ -1065,12 +1184,16 @@ function M.page(g)
   -- a shoot along pts, w0 thick at its base (a real one is 1 to 1.5 cm), thinning steadily to
   -- under a third of that at its end, where the newest internodes have hardly thickened: at
   -- its nodes, a leaf at each, alternately left and right, its bud in the axil; bunches low,
-  -- tendrils higher, now and then a lateral
-  local function shoot(pts, w0, plucked)
+  -- tendrils higher, now and then a lateral. The shoots stand a little nearer or farther in the
+  -- canopy, each at a depth of its own, and what grows from one keeps near its depth, so a
+  -- bunch hangs in front of the shoots behind its own and behind those in front of it. A barren
+  -- shoot has a tendril where a fruiting one has its bunch: the two are the same organ
+  local function shoot(pts, w0, plucked, barren)
     counts.shoot = counts.shoot + 1
-    items[#items + 1] = { kind = "shoot", pts = pts, z = 0, w0 = w0, w1 = 0.3 * w0 }
+    local zs = depths.sym(0.3)
+    items[#items + 1] = { kind = "shoot", pts = pts, z = zs, w0 = w0, w1 = 0.3 * w0 }
     -- a main shoot grows on until it is hedged, from about veraison
-    if age < 0.55 then tip(pts, 0.55 * size, 0.3 * w0, 0.01) end
+    if age < 0.55 then tip(pts, 0.55 * size, 0.3 * w0, zs) end
     local ss, tot = ink.arclen(pts)
     local nat, node, side, j = layout.range(0.15, 0.25) * size, 0, layout.chance(0.5) and 1 or -1, 1
     local nodes = {}
@@ -1085,7 +1208,7 @@ function M.page(g)
     end
     local fruit, near = {}, {}
     for _, h in ipairs(hung) do near[#near + 1] = h end
-    for _ = 1, layout.chance(0.55) and 2 or 1 do
+    for _ = 1, barren and 0 or layout.chance(0.55) and 2 or 1 do
       -- the bunches spread over the heights: a node is crowded by the bunches hung near its
       -- height, and weighed against the least crowded node, so one bunch more near it than
       -- there makes it 1 in 9 to the other's 8 in 9, and evened up, it is even again
@@ -1117,14 +1240,14 @@ function M.page(g)
       node, side = node + 1, -side
       local zone = plucked and plucked(p[2])
       local u = nat / tot
-      items[#items + 1] = { kind = "node", p = p, ta = ta, side = side, z = 0.02 }
+      items[#items + 1] = { kind = "node", p = p, ta = ta, side = side, z = zs }
       if not zone then                                  -- the fruit zone's leaves are plucked
         -- the oldest leaves, low on the cane, are the largest, fully grown; they shrink
         -- toward the young tip, and the first one or two are a little small
         local L = 1.2 * size * v.leaf * (node <= 2 and 0.8 or 1) * (1.25 - 0.75 * u ^ 1.1)
           * layout.range(0.88, 1.08)
         local j, axis = hang(p, ta - side * layout.range(55, 85), layout.range(0.75, 1.05) * L)
-        items[#items + 1] = { kind = "leaf", node = p, j = j, axis = axis + layout.sym(18), L = L, z = layout.sym(1), stem = 0,
+        items[#items + 1] = { kind = "leaf", node = p, j = j, axis = axis + layout.sym(18), L = L, z = layout.sym(1), stem = zs,
           turn = fall * (layout.u() < 0.75 and 1 or 0.35) * layout.range(0.5, 1), tint = layout.sym(1),
           young = clamp((u - 0.6) / 0.4, 0, 1), old = clamp(1.15 - u / 0.7, 0, 1) }
       end
@@ -1148,45 +1271,109 @@ function M.page(g)
         end
         if not crowded then
           hung[#hung + 1] = p[2]
-          items[#items + 1] = { kind = "bunch", node = p, t = { tx, ty }, out = out, L = Lb, z = layout.range(-0.5, 0.9),
+          items[#items + 1] = { kind = "bunch", node = p, t = { tx, ty }, out = out, L = Lb, z = zs + 0.3 * layout.range(-0.5, 0.9),
             rb = FRUIT * v.mm / 20 * S * (young and 0.6 or 1) }
         end
-      elseif node >= 6 and (node - 6) % 3 < 2 then
+      elseif (node >= 6 or barren and node >= 3) and (node - 6) % 3 < 2 then
         local wy
         for _, w in ipairs(wires) do if abs(w - p[2]) < 0.55 * size then wy = w end end
         items[#items + 1] = { kind = "tendril", node = p, a = oa, L = layout.range(0.7, 1.1) * size, wire = wy,
           z = layout.sym(0.6) }
       end
-      if node >= 3 and not zone and age >= 0.3 and laterals.chance(0.2) then lateral(p, ta, side) end
+      if node >= 3 and not zone and age >= 0.3 and laterals.chance(0.2) then lateral(p, ta, side, zs) end
     end
   end
 
   local train = {}
-  function train.spur()
-    local yc = yg + 0.3 * H                         -- the fruiting wire
-    wires = { yc + 0.3 * (yt - yc), yc + 0.58 * (yt - yc), yc + 0.84 * (yt - yc) }
-    local function plucked(y) return y < yc + 0.22 * (yt - yc) end
-    -- 1. the trunks and their cordons: one vine in the margin, and where the row goes on under
-    -- the text, the next vines along it, each cordon arm reaching halfway to its neighbour's
+  -- the row's trunks: one vine in the margin, and where the row goes on under the text, the
+  -- next vines along it
+  local function row()
     local trunks = { x0 + cw * layout.range(0.38, 0.52) }
     if xr > x1 then
       local gap = 5.5 * size * layout.range(1, 1.25)
       while trunks[#trunks] + gap < xr - 1 do trunks[#trunks + 1] = trunks[#trunks] + gap end
     end
+    return trunks
+  end
+  -- a trunk, from the ground up to its head at ytop, wandering a little as an old one does
+  local function trunkpts(xt, ytop)
+    local trunk = {}
+    local ph = layout.range(0, 360)
+    for i = 0, 16 do
+      local t = i / 16
+      trunk[#trunk + 1] = { xt + 0.25 * size * sin((t * 300 + ph) * RAD) + layout.sym(0.05), lerp(yg, ytop, t) }
+    end
+    return trunk, ph
+  end
+  -- how far an arm or a cane from the head may reach along the wire: to the margin's edge, or
+  -- halfway to the next vine's
+  local function reach(trunks, k, top, side)
+    if side < 0 then return k == 1 and top[1] - x0 - 0.1 or (trunks[k] - trunks[k - 1]) / 2 - 0.15 end
+    return k == #trunks and xr - top[1] - 0.1 or (trunks[k + 1] - trunks[k]) / 2 - 0.15
+  end
+  -- the fruiting wire at yc and the catch wires above it
+  local function trellis(yc)
+    wires = { yc + 0.3 * (yt - yc), yc + 0.58 * (yt - yc), yc + 0.84 * (yt - yc) }
+    place(MID + 1, 0, 0, 0, function()
+      for _, y in ipairs({ yc - 0.08, wires[1], wires[2], wires[3] }) do
+        ink.moveto(col[1] - 0.3, y) ink.lineto(spill and xr + 0.25 or col[3] - 0.05, y + 0.01)
+      end
+      ink.stroke({ 0.52, 0.53, 0.55 }, 0.4, 0.85)
+    end)
+  end
+  -- a shoot from a bud at bx, by, trained straight up between the catch wires and hedged at
+  -- the top, where now and then one flops over
+  local function upright(bx, by, lean, w0, plucked, barren)
+    local hedge = yt + layout.range(-0.3, 0.25)
+    local flop = layout.chance(0.3)
+    local pts, x, y, a = { { bx, by } }, bx, by, 90 + lean
+    local target = (hedge - by) * grown
+    local len, sway = 0, layout.range(0, 360)
+    while len < target do
+      a = 90 + lean + 4 * sin((len * 60 + sway) * RAD)
+      x, y = x + 0.12 * cos(a * RAD), y + 0.12 * sin(a * RAD)
+      len = len + 0.12
+      pts[#pts + 1] = { clamp(x, col[1] - 0.1, max(col[3] + 0.1, xr + 0.2)), y }
+    end
+    if flop and grown >= 1 then                     -- over the top wire and down
+      local fa, side = a, layout.chance(0.5) and 1 or -1
+      for _ = 1, floor(layout.range(6, 12)) do
+        fa = fa + side * 14
+        x, y = x + 0.12 * cos(fa * RAD), y + 0.12 * sin(fa * RAD)
+        pts[#pts + 1] = { x, y }
+      end
+    end
+    shoot(pts, w0, plucked, barren)
+  end
+  -- a spur at q, leaning sa: a stub of last year's cane cut back to two buds, and a shoot from
+  -- each (now and then one is blind)
+  local function spur(q, sa, plucked, base, barren)
+    local sl = layout.range(0.5, 0.8) * size
+    local ex, ey = q[1] + sl * cos(sa * RAD), q[2] + sl * sin(sa * RAD)
+    items[#items + 1] = { kind = "spur", q = q, e = { ex, ey }, a = sa, z = 0, base = base }
+    for b = 1, 2 do
+      if b == 1 or layout.chance(0.85) then
+        local f = b == 1 and 0.45 or 0.92
+        local lean = layout.sym(3) + (b == 1 and 7 or -7) * (cos(sa * RAD) >= 0 and 1 or -1)
+        upright(lerp(q[1], ex, f), lerp(q[2], ey, f), lean, (b == 1 and 1.35 or 1.25) * S, plucked, barren)
+      end
+    end
+  end
+
+  function train.spur()
+    local yc = yg + 0.3 * H                         -- the fruiting wire
+    -- each spur stands on its knuckle, and the fruit zone, where the leaves are plucked, with it
+    local lift = 0.28 * size
+    local function plucked(y) return y < yc + lift + 0.22 * (yt - yc) end
+    -- 1. the trunks and their cordons, each cordon arm reaching halfway to its neighbour's
+    local trunks = row()
     local arms = {}
     for k, xt in ipairs(trunks) do
-      local trunk = {}
-      local ph = layout.range(0, 360)
-      for i = 0, 16 do
-        local t = i / 16
-        trunk[#trunk + 1] = { xt + 0.25 * size * sin((t * 300 + ph) * RAD) + layout.sym(0.05), lerp(yg, yc - 0.3, t) }
-      end
+      local trunk, ph = trunkpts(xt, yc - 0.3)
       local top = trunk[#trunk]
       local own = {}
       for _, side in ipairs({ -1, 1 }) do
-        local reach
-        if side < 0 then reach = k == 1 and top[1] - x0 - 0.1 or (xt - trunks[k - 1]) / 2 - 0.15
-        else reach = k == #trunks and xr - top[1] - 0.1 or (trunks[k + 1] - xt) / 2 - 0.15 end
+        local reach = reach(trunks, k, top, side)
         if reach > 0.8 then
           -- from inside the head, curving out and up onto the wire, then along it, knuckled
           local y0 = top[2] - 0.55 * size
@@ -1207,15 +1394,23 @@ function M.page(g)
         local r = rng.fork()
         for _, arm in ipairs(own) do wood(r, arm.pts, 0.8 * size, 0.38 * size) end
         wood(r, trunk, tw, 0.95 * size)
+        -- the head, where the trunk divides, swollen and scarred where shoots were cut from it
+        local w = knobs.chance(0.5) and 1 or -1
+        knob(knobs, top[1], top[2] - 0.1 * size, knobs.range(0.45, 0.55) * size, lx, { size = size, ry = 0.85, scars = 2, wound = w, rim = { 30, 150 },
+          stubs = { { a = 90 + w * knobs.range(0, 50), len = knobs.range(0.15, 0.35) * size, w = knobs.range(0.16, 0.24) * size } } })
+        -- each arm ends where it was stopped: a knob round the cut, now and then an old spur's stub
+        for _, arm in ipairs(own) do
+          local e = arm.pts[#arm.pts]
+          local stubs = { { a = (arm.side > 0 and 0 or 180) + knobs.sym(20), len = 0.06 * size, w = 0.28 * size } }
+          if knobs.chance(0.5) then
+            stubs[2] = { a = 90 + arm.side * knobs.range(10, 50), len = knobs.range(0.12, 0.25) * size, w = 0.12 * size }
+          end
+          knob(knobs, e[1] - arm.side * 0.1 * size, e[2], knobs.range(0.24, 0.3) * size, lx, { size = size, ry = 1.1, stubs = stubs,
+            scars = knobs.chance(0.5) and 1 or 0, wound = arm.side, join = arm.side > 0 and 180 or 0 })
+        end
       end)
     end
-    -- the wires, the fruiting wire under the cordon and the catch wires above it
-    place(MID + 1, 0, 0, 0, function()
-      for _, y in ipairs({ yc - 0.08, wires[1], wires[2], wires[3] }) do
-        ink.moveto(col[1] - 0.3, y) ink.lineto(spill and xr + 0.25 or col[3] - 0.05, y + 0.01)
-      end
-      ink.stroke({ 0.52, 0.53, 0.55 }, 0.4, 0.85)
-    end)
+    trellis(yc)
 
     -- 2. the spurs, and from each bud a shoot
     for _, arm in ipairs(arms) do
@@ -1224,39 +1419,130 @@ function M.page(g)
       while at < total - 0.15 do
         while i < #arm.pts and s[i] < at do i = i + 1 end
         local q = arm.pts[i]
-        local sa = 90 + layout.sym(35)
-        local sl = layout.range(0.5, 0.8) * size
-        local ex, ey = q[1] + sl * cos(sa * RAD), q[2] + sl * sin(sa * RAD)
-        items[#items + 1] = { kind = "spur", q = q, e = { ex, ey }, a = sa, z = 0 }
-        -- the spur's two buds: a shoot from each (now and then one is blind)
-        for b = 1, 2 do
-          if b == 1 or layout.chance(0.85) then
-            local f = b == 1 and 0.45 or 0.92
-            local bx, by = lerp(q[1], ex, f), lerp(q[2], ey, f)
-            local lean = layout.sym(3) + (b == 1 and 7 or -7) * (cos(sa * RAD) >= 0 and 1 or -1)
-            local hedge = yt + layout.range(-0.3, 0.25)
-            local flop = layout.chance(0.3)
-            local pts, x, y, a = { { bx, by } }, bx, by, 90 + lean
-            local target = (hedge - by) * grown
-            local len, sway = 0, layout.range(0, 360)
-            while len < target do
-              a = 90 + lean + 4 * sin((len * 60 + sway) * RAD)
-              x, y = x + 0.12 * cos(a * RAD), y + 0.12 * sin(a * RAD)
-              len = len + 0.12
-              pts[#pts + 1] = { clamp(x, col[1] - 0.1, max(col[3] + 0.1, xr + 0.2)), y }
-            end
-            if flop and grown >= 1 then                     -- over the top wire and down
-              local fa, side = a, layout.chance(0.5) and 1 or -1
-              for _ = 1, floor(layout.range(6, 12)) do
-                fa = fa + side * 14
-                x, y = x + 0.12 * cos(fa * RAD), y + 0.12 * sin(fa * RAD)
-                pts[#pts + 1] = { x, y }
-              end
-            end
-            shoot(pts, (b == 1 and 1.35 or 1.25) * S, plucked)
+        spur({ q[1], q[2] + lift }, 90 + layout.sym(35), plucked, q)
+        at = at + layout.range(2.2, 2.9) * size
+      end
+    end
+  end
+
+  -- cane pruned (double Guyot), on the same trellis: no cordon, but each winter the trunk's
+  -- head is cut back to two of last year's canes, one each way, and a renewal spur. The head
+  -- sits a hand's breadth or two under the fruiting wire, so each cane leaves it rising, arches
+  -- over and is bent down onto the wire and tied along it, and cut after its eighth to
+  -- fifteenth bud. A cane is a finger thick, a year old,
+  -- smooth brown wood swollen at its nodes; a shoot grows from nearly every bud and is trained
+  -- up between the catch wires. Next winter the canes are cut away and new ones laid down from
+  -- the renewal spur's shoots, so the head grows knobbed with the stubs of years of canes
+  function train.cane()
+    local yc = yg + 0.3 * H
+    local function plucked(y) return y < yc + 0.22 * (yt - yc) end
+    local trunks = row()
+    local canes = {}
+    for k, xt in ipairs(trunks) do
+      local trunk, ph = trunkpts(xt, yc - layout.range(0.9, 1.2) * size)
+      local top = trunk[#trunk]
+      local hx, hy = top[1], top[2] + 0.15 * size
+      local sides = {}
+      for _, side in ipairs({ -1, 1 }) do
+        local rch = reach(trunks, k, top, side)
+        if rch > 0.8 then sides[#sides + 1] = { side = side, rch = rch } end
+      end
+      -- the head: a fist of old wood, the stubs of old canes standing out of its top, cut long,
+      -- and the flush cuts of older ones on its face, all toward one side; from it last year's
+      -- spurs, each now carrying its cane
+      local wound = layout.chance(0.5) and 1 or -1
+      local stubs = {}
+      for _ = 1, floor(layout.range(2, 4)) do
+        stubs[#stubs + 1] = { a = 90 + wound * layout.range(-10, 55), len = layout.range(0.15, 0.35) * size,
+          w = layout.range(0.13, 0.2) * size }
+      end
+      for _, sd in ipairs(sides) do
+        stubs[#stubs + 1] = { a = 90 - sd.side * layout.range(40, 55), len = layout.range(0.15, 0.3) * size,
+          w = 0.2 * size, live = true, sd = sd }
+      end
+      local R, ry = layout.range(0.52, 0.6) * size, layout.range(0.85, 1)
+      local tips, edge
+      place(MID - 2, 0, 0, 0, function()
+        wood(rng.fork(), trunk, 1.1 * size, 0.95 * size)
+        tips, edge = knob(knobs, hx, hy, R, lx, { size = size, ry = ry, stubs = stubs, scars = knobs.chance(0.5) and 2 or 1, wound = wound })
+      end)
+      for i, st in ipairs(stubs) do
+        if st.live then
+          -- from the spur's end, rising, over in a bow and down onto the wire
+          local side, rch = st.sd.side, st.sd.rch
+          local p0 = tips[i]
+          local d1 = min(rch - 0.3 * size, layout.range(1.5, 2.1) * size)
+          local arch = layout.range(0.2, 0.45) * size
+          local c0, s0 = dir(st.a)
+          local p3 = { hx + side * d1, yc }
+          local p1 = { p0[1] + 0.25 * d1 * c0, p0[2] + 0.25 * d1 * s0 }
+          local p2 = { p3[1] - side * 0.45 * d1, max(yc + arch, p1[2] + 0.15 * size) }
+          local pts = {}
+          for j = 0, 16 do
+            local t = j / 16
+            local u = 1 - t
+            pts[#pts + 1] = { u ^ 3 * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t ^ 3 * p3[1],
+              u ^ 3 * p0[2] + 3 * u * u * t * p1[2] + 3 * u * t * t * p2[2] + t ^ 3 * p3[2] }
+          end
+          -- then lying along the wire
+          local n = max(2, floor((rch - d1) / 0.15))
+          for j = 1, n do
+            local x = p3[1] + side * (rch - d1) * j / n
+            pts[#pts + 1] = { x, yc + 0.02 * size * sin(x * 7 + ph) }
+          end
+          canes[#canes + 1] = { pts = pts }
+        end
+      end
+      -- the renewal spur, low on the head on one side, below that side's cane. Its shoots are
+      -- next year's canes, and the grower takes off any bunches they set, to keep their
+      -- strength for the wood, so they bear none
+      if #sides > 0 then
+        local sd = sides[layout.chance(0.5) and 1 or #sides]
+        local a = 90 - sd.side * layout.range(55, 75)
+        local qx, qy = edge(a * RAD, 0.75)
+        spur({ qx, qy }, a, plucked, nil, true)
+      end
+    end
+    trellis(yc)
+
+    -- each cane, its nodes swollen, its cut end showing
+    local canec = mix(C.cane, C.bark, 0.35)
+    local w0, w1 = 0.2 * size, 0.13 * size
+    for _, cn in ipairs(canes) do
+      local pts = cn.pts
+      local s, total = ink.arclen(pts)
+      local function index(d)
+        local i = 1
+        while i < #pts and s[i] < d do i = i + 1 end
+        return i
+      end
+      local function heading(i)
+        local p, q = pts[max(1, i - 1)], pts[min(#pts, i + 1)]
+        return deg(q[1] - p[1], q[2] - p[2])
+      end
+      local nodes, d = {}, layout.range(0.25, 0.4) * size
+      while d < total - 0.12 do
+        local i = index(d)
+        nodes[#nodes + 1] = { p = pts[i], a = heading(i), w = lerp(w0, w1, d / total), blind = not layout.chance(0.9) }
+        d = d + layout.range(0.9, 1.2) * size
+      end
+      place(MID - 1, 0, 0, 0, function()
+        band(pts, w0, w1, canec)
+        for _, nd in ipairs(nodes) do
+          local p, w = nd.p, nd.w
+          local nx, ny = dir(nd.a + 90)
+          ellipse(p[1], p[2], 0.56 * w, 0.3 * w, (nd.a + 90) * RAD) ink.fill(mix(canec, C.barkdark, 0.15))
+          ink.moveto(p[1] - 0.5 * w * nx, p[2] - 0.5 * w * ny) ink.lineto(p[1] + 0.5 * w * nx, p[2] + 0.5 * w * ny)
+          ink.stroke(C.barkdark, 0.3, 0.6)
+          if nd.blind then
+            ink.circle(p[1] + 0.5 * w * nx, p[2] + 0.5 * w * ny, 0.22 * w) ink.fill(mix(C.cane, C.barkdark, 0.4))
           end
         end
-        at = at + layout.range(2.2, 2.9) * size
+        local n = #pts
+        cutface(knobs, pts[n][1], pts[n][2], 0.5 * w1, 0.25 * w1, (heading(n) + 90) * RAD, false)
+      end)
+      for _, nd in ipairs(nodes) do
+        if not nd.blind then upright(nd.p[1], nd.p[2] + 0.4 * nd.w, layout.sym(6), 1.25 * S, plucked) end
       end
     end
   end
@@ -1343,7 +1629,7 @@ function M.page(g)
     end
   end
   local training = train[g.pruning or "spur"]
-  if not training then error("florilegium-grapes: pruning=" .. tostring(g.pruning) .. "? one of spur, trenzado", 0) end
+  if not training then error("florilegium-grapes: pruning=" .. tostring(g.pruning) .. "? one of spur, cane, trenzado", 0) end
   training()
 
   -- summer pruning: a leaf whose blade hangs over a bunch is pulled, stalk and all
@@ -1385,12 +1671,24 @@ function M.page(g)
     if k == "spur" then
       place(MID - 1, 0, 0, 0, function()
         local q, e = it.q, it.e
-        band({ { q[1], q[2] }, { lerp(q[1], e[1], 0.5), lerp(q[2], e[2], 0.5) + 0.02 }, { e[1], e[2] } }, 0.3 * size,
-          0.2 * size, C.cane)
+        if it.base then
+          -- the spur position: knobbed by years of spurs cut back here, each new one a little
+          -- higher than the last, the stubs of the last one or two left standing beside it
+          local b, wound = it.base, knobs.chance(0.5) and 1 or -1
+          local stubs = {}
+          for _ = 1, knobs.chance(0.6) and 2 or 1 do
+            stubs[#stubs + 1] = { a = 90 + wound * knobs.range(25, 70), len = knobs.range(0.12, 0.3) * size,
+              w = knobs.range(0.11, 0.15) * size }
+          end
+          knob(knobs, b[1], b[2] + 0.1 * size, knobs.range(0.2, 0.27) * size, lx, { size = size, ry = 1.25, stubs = stubs,
+            scars = knobs.chance(0.5) and 1 or 0, wound = wound })
+        end
+        band({ { q[1], q[2] }, { lerp(q[1], e[1], 0.5), lerp(q[2], e[2], 0.5) + 0.02 }, { e[1], e[2] } }, 0.24 * size,
+          0.17 * size, C.cane)
         local mx, my = lerp(q[1], e[1], 0.45), lerp(q[2], e[2], 0.45)        -- the node it was cut above
-        ink.circle(mx, my, 0.12 * size) ink.fill(mix(C.cane, C.barkdark, 0.3))
+        ink.circle(mx, my, 0.1 * size) ink.fill(mix(C.cane, C.barkdark, 0.3))
         local ca, sa = dir(it.a)
-        local cx, cy, rr = e[1], e[2], 0.1 * size
+        local cx, cy, rr = e[1], e[2], 0.085 * size
         ink.moveto(cx + rr * sa, cy - rr * ca)
         ink.curveto(cx + rr * sa + 0.5 * rr * ca, cy - rr * ca + 0.5 * rr * sa, cx - rr * sa + 0.5 * rr * ca,
           cy + rr * ca + 0.5 * rr * sa, cx - rr * sa, cy + rr * ca)
@@ -1399,11 +1697,11 @@ function M.page(g)
         ink.close() ink.fill({ 0.78, 0.68, 0.5 }) ink.stroke(C.barkdark, 0.25, 0.8)
       end)
     elseif k == "shoot" then
-      place(layer(it.z) == MID and MID or layer(it.z), 0, 0, 0, function()
+      place(layer(it.z), 0, 0, 0, function()
         band(it.pts, it.w0, it.w1, shootc)
       end)
     elseif k == "node" then
-      place(MID, 0, 0, 0, function()
+      place(layer(it.z) + 0.1, 0, 0, 0, function()
         local p = it.p
         local ca, sa = dir(it.ta)
         ink.moveto(p[1] - 0.06 * size * sa, p[2] + 0.06 * size * ca) ink.lineto(p[1] + 0.06 * size * sa, p[2] - 0.06 * size * ca)

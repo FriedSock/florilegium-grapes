@@ -1,0 +1,17 @@
+% !TEX program = lualatex
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[a4paper,left=68mm,right=22mm,top=32mm,bottom=30mm,headsep=8mm]{geometry}
+\usepackage[vine=pinot]{florilegium-grapes}
+\usepackage{lipsum}
+\newcommand\variety[4]{\newpage\florilegiumgrapesvine{#1}\florilegiumgrapesage{#2}\florilegiumgrapespruning{#4}\section*{#3}\lipsum[1-4]}
+\begin{document}
+\variety{pinot}{0.8}{Pinot Noir}{cane}
+\variety{saperavi}{0.8}{Saperavi}{cane}
+\variety{gewurztraminer}{0.8}{Gewürztraminer}{cane}
+\variety{rkatsiteli}{0.8}{Rkatsiteli}{cane}
+\variety{regent}{0.8}{Regent}{cane}
+\variety{johanniter}{0.8}{Johanniter}{cane}
+\variety{touriga}{0.8}{Touriga Nacional}{cane}
+\variety{vidiano}{0.8}{Vidiano}{cane}
+\end{document}

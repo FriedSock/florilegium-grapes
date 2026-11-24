@@ -20,6 +20,8 @@ vined() {
 
 trenzado_showcase() { vined trenzado-showcase; }
 
+cane_showcase() { vined cane-showcase; }
+
 composite() { latex gallery "$1.tex"; }
 
 rasterise() { swift gallery/rasterise.swift "$@"; }
