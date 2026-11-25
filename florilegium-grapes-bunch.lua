@@ -17,8 +17,7 @@ local mix_colors, scale_color = ink.mix_colors, ink.scale_color
 -- cluster of grapes that hangs below its tip, each grape on its pedicel. The bunch's outline
 -- (an inverted pear, or a cylinder) is as wide as the variety's grapes need to cover it,
 -- closely for a compact bunch and with gaps for a loose one; in a compact bunch the grapes
--- are drawn toward that outline, so it has no hollows between its clusters. A winged bunch
--- has a second, smaller panicle, the outer arm, splitting off the peduncle. Grapes that
+-- are drawn toward that outline, so it has no hollows between its clusters. Grapes that
 -- collide are pushed apart. Grapes vary in size, a few stay small and green (shot berries),
 -- and as the bunch ripens they color one by one. Painted from the back: stalks, then grapes,
 -- nearer ones lighter. The stalks are drawn as thick as real ones, on the bunch's scale.
@@ -42,14 +41,13 @@ local function bunch_width_share(bunch_shape, t)
 end
 
 -- the rachis, tilted, bending as it hangs
-local function rachis_of(rng, panicle)
-  local length = 0.78 * panicle.length
+local function rachis_of(rng, top, bunch_length, tilt)
+  local length = 0.78 * bunch_length
   local bend_x, bend_z = rng.plus_or_minus(0.15), rng.plus_or_minus(0.15)
-  local cos_tilt, sin_tilt = cos(radians(panicle.tilt)), sin(radians(panicle.tilt))
+  local cos_tilt, sin_tilt = cos(radians(tilt)), sin(radians(tilt))
   local function point_at(t)
     local x, y = bend_x * t * t * length, -t * length
-    return panicle.x + x * cos_tilt - y * sin_tilt, panicle.y + x * sin_tilt + y * cos_tilt,
-      panicle.z + bend_z * t * t * length
+    return top[1] + x * cos_tilt - y * sin_tilt, top[2] + x * sin_tilt + y * cos_tilt, bend_z * t * t * length
   end
   return { length = length, point_at = point_at }
 end
@@ -113,11 +111,11 @@ end
 
 -- a compact bunch has no hollows between its clusters: its grapes are drawn out (or in)
 -- toward the outline's surface, a medium one part way, a loose one not at all
-local function pull_grapes_toward_outline(bunch, panicle, rachis, outline_radius_at)
+local function pull_grapes_toward_outline(bunch, rachis, outline_radius_at)
   local pull = PULL_TO_OUTLINE_BY_COMPACTNESS[bunch.vine.compactness]
   if pull <= 0 then return end
   for _, grape in ipairs(bunch.grapes) do
-    local t = clamp((panicle.y - grape.y) / rachis.length, 0, 1)
+    local t = clamp((bunch.top[2] - grape.y) / rachis.length, 0, 1)
     local axis_x, _, axis_z = rachis.point_at(t)
     local dx, dz = grape.x - axis_x, grape.z - axis_z
     local distance = sqrt(dx * dx + dz * dz)
@@ -128,11 +126,12 @@ local function pull_grapes_toward_outline(bunch, panicle, rachis, outline_radius
   end
 end
 
--- a panicle hanging down -y from its top (panicle.x, y, z), panicle.length long and tilted by
--- panicle.tilt degrees, its stalks, branches and grapes added to the bunch's
-local function grow_panicle(rng, bunch, panicle)
-  local vine, grape_radius, grape_count = bunch.vine, bunch.grape_radius, panicle.grape_count
-  local rachis = rachis_of(rng, panicle)
+-- the bunch, hanging down -y from its top and tilted out a little from the shoot: its rachis,
+-- its branches and their clusters of grapes
+local function grow_bunch(rng, bunch)
+  local vine, grape_radius, grape_count = bunch.vine, bunch.grape_radius, bunch.grape_count
+  local tilt = bunch.outward * (12 + rng.plus_or_minus(8))
+  local rachis = rachis_of(rng, bunch.top, bunch.length, tilt)
   local widest = widest_outline_radius(vine, rachis.length, grape_radius, grape_count)
   local function width_share(t) return bunch_width_share(vine.bunch_shape, t) end
   local function outline_radius_at(t) return widest * width_share(t) end
@@ -177,7 +176,7 @@ local function grow_panicle(rng, bunch, panicle)
     bunch.branches[#bunch.branches + 1] = branch
     hang_cluster(rng, bunch, branch, cluster_size, cluster_radius)
   end
-  pull_grapes_toward_outline(bunch, panicle, rachis, outline_radius_at)
+  pull_grapes_toward_outline(bunch, rachis, outline_radius_at)
 end
 
 -- the peduncle, bare from the node to the first branch: 16 to 17 mm on a tight bunch of
@@ -245,23 +244,19 @@ local function attach_pedicels(bunch)
   end
 end
 
--- the stalks: the peduncle from the node, the wing's arm or a tendril, then the bunch's own.
--- A bunch is a tendril that flowers, and its peduncle often forks: the fork grows into a
--- wing, a small bunch of its own, or stays a bare tendril, curving out and up
+-- the stalks: the peduncle from the node, the tendril it forks into, then the bunch's own. A
+-- bunch is a tendril that flowers, and its peduncle often forks; the fork can grow into a
+-- wing, a small bunch of its own, but here it stays a bare tendril, curving out and up
 local function paint_bunch_stalks(bunch)
   local real_mm_bp, stalks = bunch.real_mm * BP_PER_CM, bunch.stalks
   local bezier, fork, length, outward = bunch.peduncle.bezier, bunch.fork, bunch.length, bunch.outward
+  local rise = bunch.peduncle.length
   ink.move_to(0, 0)
   ink.curve_to(bezier[2][1], bezier[2][2], bezier[3][1], bezier[3][2], bezier[4][1], bezier[4][2])
   ink.stroke(STALK_COLOR, 5.5 * real_mm_bp, 1)
   ink.move_to(fork[1], fork[2])
-  if bunch.vine.bunch_shape == "winged" then
-    ink.line_to(bunch.wing[1], bunch.wing[2])
-  else
-    local rise = bunch.peduncle.length
-    ink.curve_to(fork[1] + outward * 0.06 * length, fork[2] + 0.05 * rise, fork[1] + outward * 0.1 * length,
-      fork[2] + 0.15 * rise, fork[1] + outward * 0.11 * length, fork[2] + 0.3 * rise)
-  end
+  ink.curve_to(fork[1] + outward * 0.06 * length, fork[2] + 0.05 * rise, fork[1] + outward * 0.1 * length,
+    fork[2] + 0.15 * rise, fork[1] + outward * 0.11 * length, fork[2] + 0.3 * rise)
   ink.stroke(STALK_COLOR, 3 * real_mm_bp, 1)
   table.sort(stalks, function(a, b) return a.from[3] + a.to[3] < b.from[3] + b.to[3] end)
   for _, stalk in ipairs(stalks) do
@@ -448,21 +443,9 @@ function M.draw(rng, spec)
   local vine, variety, length, outward = spec.vine, spec.variety, spec.length, spec.outward
   local peduncle = peduncle_of(rng, length, outward)
   local bunch = { vine = vine, grape_radius = spec.grape_radius, real_mm = 2 * spec.grape_radius / variety.grape_diameter_mm,
-    length = length, outward = outward, peduncle = peduncle, stalks = {}, grapes = {}, branches = {} }
-  local top = peduncle.bezier[4]
-  local tilt = outward * (12 + rng.plus_or_minus(8))
-  grow_panicle(rng, bunch, { x = top[1], y = top[2], z = 0, length = length, tilt = tilt,
-    grape_count = variety.grapes_per_bunch })
-  local wing_side = rng.random_sign()
-  local fork_x, fork_y = bezier_point(peduncle.bezier, 0.55)
-  bunch.fork = { fork_x, fork_y }
-  bunch.wing = { fork_x + wing_side * 0.22 * length, fork_y - 0.05 * length }
-  if vine.bunch_shape == "winged" then
-    local wing_z = rng.plus_or_minus(0.1) * length
-    local wing_tilt = wing_side * rng.between(15, 30)
-    grow_panicle(rng, bunch, { x = bunch.wing[1], y = bunch.wing[2], z = wing_z, length = 0.45 * length, tilt = wing_tilt,
-      grape_count = floor(0.3 * variety.grapes_per_bunch) })
-  end
+    grape_count = variety.grapes_per_bunch, length = length, outward = outward, peduncle = peduncle,
+    top = peduncle.bezier[4], fork = { bezier_point(peduncle.bezier, 0.55) }, stalks = {}, grapes = {}, branches = {} }
+  grow_bunch(rng, bunch)
   press_grapes_apart(bunch.grapes, vine.compactness)
   attach_pedicels(bunch)
   paint_bunch_stalks(bunch)

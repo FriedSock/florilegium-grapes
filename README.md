@@ -151,7 +151,7 @@ spreads the year over the document, spring on the first page and autumn on the l
 | Pinot Noir | three to five shallow lobes | dense, cylindrical | small, blue-black under a dusty bloom |
 | Saperavi | three lobes, large | fairly dense, an inverted pear | dark blue, heavily bloomed |
 | Gewürztraminer | small, nearly whole | small, dense, cone-shaped | small, oval, each a shade from gold to copper-pink |
-| Rkatsiteli | five lobes, downy | fairly dense, cone-shaped, sometimes shouldered | large, yellow-green, flecked with rust |
+| Rkatsiteli | five lobes, downy | fairly dense, cone-shaped (a real one is sometimes shouldered, which is not drawn) | large, yellow-green, flecked with rust |
 | Regent | three lobes, cut medium-deep | dense, cylindrical or cone-shaped | large, round, blue-black |
 | Johanniter | five lobes, nearly smooth | dense, cylindrical | golden, flecked with rust |
 | Touriga Nacional | small, five lobes, deeply cut | small, medium-dense, cylindrical or cone-shaped | blue-black |

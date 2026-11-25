@@ -8,6 +8,10 @@ A temporary list of outstanding work. Remove an item when it is done, and the fi
 - `\florilegiumgrapestextend` lets the row run on under the text down to the foot of the page, so on that page the vines are drawn behind the page number (the last page of `gallery/widths.pdf`). A document that uses it should put its page number elsewhere; the README could say so.
 - The gallery's bash scripts (`gallery/all.sh`, `gallery/page.sh` and the others) say nothing about themselves. Wanted: a `--help` on each (or a man page) saying which image it makes, what it builds on the way (the showcase or the trenzado showcase), that it runs from anywhere in the repository, and what it needs (`lualatex` on the PATH, and for now macOS).
 
+## Bunches (`florilegium-grapes-bunch.lua`)
+
+- Rkatsiteli's bunch is not ampelographically accurate: a real one is cone-shaped and sometimes shouldered, or winged, a second, smaller bunch forking off its peduncle, but every bunch is drawn as one panicle. Winged bunches were drawn once (for about a third of document seeds, none below 14) and taken out on 2026-11-25, as they were drawn wrong: the wing's pass drawing its grapes toward its outline pulled the main bunch's grapes as well. A wing would grow from the fork in the peduncle that is drawn now as a bare tendril.
+
 ## Leaves (`florilegium-grapes-leaf.lua`)
 
 ### Handled, could be improved

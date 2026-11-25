@@ -59,7 +59,7 @@ local VARIETIES = {
 -- and the traits a vine of the variety may take, one each drawn for the document: lobe_counts
 -- (3 or 5, as many as the leaf is cut into, any one of the list), sinus_depth (how deep its
 -- sinuses cut, a range), berry_tone (dark, red or pale grapes), berry_shapes (round, oval),
--- bunch_shapes (cylindrical, conical, winged) and compactness (2 fairly dense, 3 dense). Pinot
+-- bunch_shapes (cylindrical, conical) and compactness (2 fairly dense, 3 dense). Pinot
 -- noir's leaf is slightly lobed, three to five; saperavi's three-lobed; regent's three-lobed,
 -- rarely five, cut medium-deep; johanniter's and rkatsiteli's five-lobed (Wikipedia's
 -- ampelography); touriga nacional's five-lobed with pronounced sinuses, its bunch cylindrical
@@ -73,7 +73,7 @@ local VARIETY_TRAITS = {
   gewurztraminer = { lobe_counts = { 3, 3, 3, 5 }, sinus_depth = { 0.08, 0.2 }, berry_tone = "red",
     berry_shapes = { "oval" }, bunch_shapes = { "conical" }, compactness = 3 },
   rkatsiteli = { lobe_counts = { 5 }, sinus_depth = { 0.35, 0.55 }, berry_tone = "pale",
-    berry_shapes = { "oval", "round" }, bunch_shapes = { "conical", "conical", "winged" }, compactness = 2 },
+    berry_shapes = { "oval", "round" }, bunch_shapes = { "conical" }, compactness = 2 },
   regent = { lobe_counts = { 3, 3, 3, 3, 5 }, sinus_depth = { 0.4, 0.55 }, berry_tone = "dark",
     berry_shapes = { "round", "round", "oval" }, bunch_shapes = { "cylindrical", "cylindrical", "conical" },
     compactness = 3 },
