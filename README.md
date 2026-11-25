@@ -87,7 +87,7 @@ braid begins a metre and a half from it):
 
 - **The braid** is a loose plait of old canes, barked like the spur vine's trunk, each kinked at
   its nodes and wandering over and under the others, with gaps between them. Its looseness is
-  set by `BRAID_LOOSENESS` in `florilegium-grapes-vine.lua`: 0 a tight bundle of six to eight
+  set by `BRAID_LOOSENESS` in `florilegium-grapes-wood.lua`: 0 a tight bundle of six to eight
   canes, 1 two to four spread wide (0.6 by default).
 - **Thin steel poles** hold it up close to the ground, each lashed to it with two turns of twine;
   between them it sags. (The valley holds its braids 60 to 80 cm up on forked props, once of
@@ -162,8 +162,9 @@ colours and shapes were checked against photographs of bunches on the vine.
 
 ## Quick start
 
-With LuaLaTeX, put `florilegium-grapes.sty`, `florilegium-grapes.lua`, `florilegium-grapes-ink.lua`
-and `florilegium-grapes-vine.lua` beside your document (or upload them to an
+With LuaLaTeX, put `florilegium-grapes.sty` and the `florilegium-grapes*.lua` files (the glue,
+`-ink`, `-palette`, `-varieties`, `-leaf`, `-bunch`, `-shoot`, `-wood` and `-vine`) beside your
+document (or upload them to an
 [Overleaf](https://www.overleaf.com) project set to LuaLaTeX):
 
 ```latex
@@ -247,4 +248,4 @@ code throughout, with no generative image models.
 ## License
 
 MIT, see [LICENSE](LICENSE). Copyright (c) 2026 Kevin Raymond, and Copyright (c) 2026 Jack
-Bracewell for the grapevine (`florilegium-grapes-vine.lua`).
+Bracewell for the grapevine (`florilegium-grapes-vine.lua` and the modules it draws with).

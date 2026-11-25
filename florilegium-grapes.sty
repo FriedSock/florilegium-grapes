@@ -4,7 +4,7 @@
 %% MIT License, in full at the end of these notes.
 %%
 %% LuaLaTeX only. The geometry of every leaf, grape and cane is computed in Lua
-%% (florilegium-grapes-vine.lua, florilegium-grapes-ink.lua) and written straight into the page as PDF
+%% (florilegium-grapes-vine.lua and the modules it draws with) and written straight into the page as PDF
 %% path operators.
 %%
 %% Usage
@@ -81,30 +81,25 @@
 
 \directlua{florilegiumgrapes = require("florilegium-grapes")}
 \ifx\florilegiumgrapes@vine\@empty\else
-  \directlua{florilegiumgrapes.vine = "\luaescapestring{\florilegiumgrapes@vine}"}\fi
+  \directlua{florilegiumgrapes.variety = "\luaescapestring{\florilegiumgrapes@vine}"}\fi
 \ifx\florilegiumgrapes@pruning\@empty\else
   \directlua{florilegiumgrapes.pruning = "\luaescapestring{\florilegiumgrapes@pruning}"}\fi
-\newcommand\florilegiumgrapeswidth[1]{\directlua{florilegiumgrapes.width = \number\dimexpr#1\relax * 2.54 / (72.27 * 65536)}}
+\newcommand\florilegiumgrapeswidth[1]{\directlua{florilegiumgrapes.column_width_cm = \number\dimexpr#1\relax * 2.54 / (72.27 * 65536)}}
 \ifx\florilegiumgrapes@width\@empty\else\florilegiumgrapeswidth{\florilegiumgrapes@width}\fi
 \newcommand\florilegiumgrapestextend{\par
-  \directlua{florilegiumgrapes.textend(\number\value{page}, \number\dimexpr\pagetotal+\pagedepth\relax)}}
+  \directlua{florilegiumgrapes.mark_text_end(\number\value{page}, \number\dimexpr\pagetotal+\pagedepth\relax)}}
 \newcommand\florilegiumgrapespruning[1]{\directlua{florilegiumgrapes.pruning = "\luaescapestring{#1}"}}
-\newcommand\florilegiumgrapesvine[1]{\directlua{florilegiumgrapes.vine = "\luaescapestring{#1}"}}
-\newcommand\florilegiumgrapesage[1]{\directlua{florilegiumgrapes.age = florilegiumgrapes.number("\string\\florilegiumgrapesage", "\luaescapestring{#1}", nil)}}
-
-%% the page's seed: the page number, and the document's seed if it has one
-\def\florilegiumgrapes@seed{%
-  \directlua{tex.sprint(florilegiumgrapes.seed(\number\value{page}\ifx\florilegiumgrapesseed\@empty\else,
-    florilegiumgrapes.number("\string\\florilegiumgrapesseed", "\luaescapestring{\florilegiumgrapesseed}", nil)\fi))}}
+\newcommand\florilegiumgrapesvine[1]{\directlua{florilegiumgrapes.variety = "\luaescapestring{#1}"}}
+\newcommand\florilegiumgrapesage[1]{\directlua{florilegiumgrapes.season = florilegiumgrapes.parse_number("\string\\florilegiumgrapesage", "\luaescapestring{#1}")}}
 
 \newcommand\florilegiumgrapes@vinepage{%
 \begin{tikzpicture}[overlay]
-  \directlua{florilegiumgrapes.twoside = \if@twoside true\else false\fi}%
-  \edef\flogr@seed{\florilegiumgrapes@seed}%
+  \directlua{florilegiumgrapes.two_sided = \if@twoside true\else false\fi}%
   % aging: the sheet's place among all the sheets of the last run, whatever the page numbers
   \ifflorilegiumgrapes@aging\ifnum\PreviousTotalPages>0
-    \directlua{florilegiumgrapes.auto_age(\number\ReadonlyShipoutCounter, \PreviousTotalPages)}\fi\fi
-  \directlua{florilegiumgrapes.page(\flogr@seed)}%
+    \directlua{florilegiumgrapes.set_season_from_sheet(\number\ReadonlyShipoutCounter, \PreviousTotalPages)}\fi\fi
+  \directlua{florilegiumgrapes.draw_vine_on_page(\number\value{page}\ifx\florilegiumgrapesseed\@empty\else,
+    florilegiumgrapes.parse_number("\string\\florilegiumgrapesseed", "\luaescapestring{\florilegiumgrapesseed}")\fi)}%
 \end{tikzpicture}}
 \ifflorilegiumgrapes@aging
   % the kernel records the number of sheets in the .aux, and the next run reads it back

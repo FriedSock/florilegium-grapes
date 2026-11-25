@@ -1,7 +1,7 @@
 -- tools/bytes.lua -- how much a vine page's drawing takes, and how much of it each part
 -- takes, without TeX: the PDF path operators a page writes, before compression, averaged
 -- over three pages (pinot noir, saperavi and gewurztraminer, late summer). Each part is
--- switched off in turn by patching florilegium-grapes-vine.lua's source as it loads, so a
+-- switched off in turn by patching its function in its module's source as it loads, so a
 -- patch whose text the module no longer has stops the run: change the patch to match.
 --   texlua tools/bytes.lua          (from the repository root)
 -- Copyright (c) 2026 Jack Bracewell. MIT License: see LICENSE.
@@ -10,42 +10,59 @@ local written = 0
 tex = { sprint = function() end }
 texio = nil
 luatexbase = { registernumber = function() return 0 end }
-node = { new = function() return {} end, write = function(n) written = written + #n.data end }
-local src = io.open("florilegium-grapes-vine.lua"):read("a")
-local function measure(patches)
-  local s = src
-  for _, p in ipairs(patches or {}) do
-    local a, b = s:find(p[1], 1, true)
-    assert(a, p[1])
-    s = s:sub(1, a - 1) .. p[2] .. s:sub(b + 1)
+node = { new = function() return {} end, write = function(literal) written = written + #literal.data end }
+
+local MODULES = { "florilegium-grapes-ink", "florilegium-grapes-palette", "florilegium-grapes-varieties",
+  "florilegium-grapes-leaf", "florilegium-grapes-bunch", "florilegium-grapes-shoot", "florilegium-grapes-wood",
+  "florilegium-grapes-vine" }
+local PAGES = { { variety = "pinot", page_number = 1 }, { variety = "saperavi", page_number = 2 },
+  { variety = "gewurztraminer", page_number = 3 } }
+
+local function source_of(module) return io.open(module .. ".lua"):read("a") end
+
+-- each patch { module, a function's first line } makes that function return at once
+local function load_vine(patches)
+  for _, module in ipairs(MODULES) do package.loaded[module] = nil end
+  local sources = {}
+  for _, patch in ipairs(patches) do
+    local module, first_line = patch[1], patch[2] .. "\n"
+    local source = sources[module] or source_of(module)
+    local at = source:find(first_line, 1, true)
+    assert(at, first_line)
+    sources[module] = source:sub(1, at - 1) .. patch[2] .. " do return end\n" .. source:sub(at + #first_line)
   end
-  local vine = load(s, "=vine")()
+  for module, source in pairs(sources) do package.loaded[module] = load(source, "=" .. module)() end
+  return require("florilegium-grapes-vine")
+end
+
+local function average_bytes_a_page(patches)
+  local vine = load_vine(patches or {})
   local total = 0
-  local pages = { { "pinot", 1 }, { "saperavi", 2 }, { "gewurztraminer", 3 } }
-  for _, pg in ipairs(pages) do
+  for _, page in ipairs(PAGES) do
     written = 0
-    vine.page({ pw = 21, ph = 29.7, colright = 6.4, seed = pg[2] * 97 + 1030, docseed = 0, age = 0.8, vine = pg[1] })
+    vine.draw_page({ paper_width = 21, paper_height = 29.7, column_left = 0.3, column_right = 6.4,
+      seed = page.page_number * 97 + 1030, document_seed = 0, season = 0.8, variety = page.variety, pruning = "spur" })
     total = total + written
   end
-  return total / #pages
+  return total / #PAGES
 end
-local all = measure()
-print(string.format("%-34s %6.0f KB a page", "everything", all / 1024))
--- a function that draws nothing: its first line, and the same with a return after it
-local function off(line, ret) return { line .. "\n", line .. " do return " .. (ret or "") .. " end\n" } end
-local LEAF = "local function leaf(r, c, v, lobes, depth, lx, under, pose, rot, fuzz, old)"
-local SIDE = "        ink.poly(map({ { x0, y0 }, { lerp(x0, x1, 0.55) + r.sym(0.02), lerp(y0, y1, 0.55) }, "
-  .. "{ x1, y1 } }), false)"
-local parts = {
-  { "leaves (all)", { off(LEAF) } },
-  { "  of which hairs", { { "if fuzz > 0.05 then", "if false then" }, { "if fuzz > 0.25 then", "if false then" } } },
-  { "  of which side veins", { { SIDE, "" } } },
-  { "bunches (all)", { off("local function bunch(r, sp, L, c, bl, lx, ripe, rb, want, v, out)", "0") } },
-  { "  of which bloom powder", { { "if wax > 0.06 then", "if false then" } } },
-  { "trunk and cordon", { off("local function wood(r, pts, w0, w1)") } },
-  { "tendrils", { off("local function tendril(r, L, c)") } },
+
+local PARTS = {
+  { "leaves (all)", { { "florilegium-grapes-leaf", "function M.draw(rng, leaf)" } } },
+  { "  of which hairs", { { "florilegium-grapes-leaf", "local function paint_hairs(rng, plan, edge, project_all, hairiness)" },
+    { "florilegium-grapes-leaf", "local function paint_edge_fringe(rng, edge, project_all, hairiness)" } } },
+  { "  of which side veins",
+    { { "florilegium-grapes-leaf", "local function paint_side_veins(rng, plan, project_all, color, underside)" } } },
+  { "bunches (all)", { { "florilegium-grapes-bunch", "function M.draw(rng, spec)" } } },
+  { "  of which bloom powder",
+    { { "florilegium-grapes-bunch", "local function paint_bloom(rng, grape, oval, bloom_color, wax, rubbed)" } } },
+  { "trunk and cordon", { { "florilegium-grapes-wood", "function M.draw_old_wood(rng, centerline, start_width, end_width)" } } },
+  { "tendrils", { { "florilegium-grapes-shoot", "function M.draw_tendril(rng, length, color)" } } },
 }
-for _, p in ipairs(parts) do
-  local without = measure(p[2])
-  print(string.format("%-34s %6.0f KB  (%2.0f%%)", p[1], (all - without) / 1024, 100 * (all - without) / all))
+
+local everything = average_bytes_a_page()
+print(string.format("%-34s %6.0f KB a page", "everything", everything / 1024))
+for _, part in ipairs(PARTS) do
+  local without = average_bytes_a_page(part[2])
+  print(string.format("%-34s %6.0f KB  (%2.0f%%)", part[1], (everything - without) / 1024, 100 * (everything - without) / everything))
 end

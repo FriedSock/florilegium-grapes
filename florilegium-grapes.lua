@@ -6,81 +6,100 @@
 local vine = require("florilegium-grapes-vine")
 local M = {}
 
-local SP_CM = 2.54 / (72.27 * 65536)          -- cm per scaled point
-local function cm(name) return tex.dimen[name] * SP_CM end
+local CM_PER_SCALED_POINT = 2.54 / (72.27 * 65536)
+local CM_PER_INCH = 2.54
+local NARROWEST_COLUMN_CM = 4.4
+local MARGIN_EDGE_CM = 0.3
+
+local function dimension_cm(name) return tex.dimen[name] * CM_PER_SCALED_POINT end
+
+local function warn(message)
+  if luatexbase and luatexbase.module_warning then luatexbase.module_warning("florilegium-grapes", message) end
+end
+
+M.two_sided = false   -- \if@twoside, set at each shipout
+M.column_width_cm = nil   -- width=, \florilegiumgrapeswidth: from the text out; nil for the whole margin
+M.variety = "pinot"   -- vine=, \florilegiumgrapesvine
+M.pruning = "spur"   -- pruning=, \florilegiumgrapespruning
+M.season = nil   -- \florilegiumgrapesage, or the aging option: 0 spring, 0.5 summer, 1 autumn; nil late summer
+
+local text_end = nil
+local has_warned_of_narrow_column = false
+
+-- \florilegiumgrapestextend: the page the text ends on, and how far down it the text reaches
+function M.mark_text_end(page_number, depth_sp) text_end = { page_number = page_number, depth_sp = depth_sp } end
+
+local function text_left_edge(page_number)
+  local is_even_page = M.two_sided and page_number % 2 == 0
+  return CM_PER_INCH + tex.hoffset * CM_PER_SCALED_POINT + dimension_cm(is_even_page and "evensidemargin" or "oddsidemargin")
+end
+
+local function text_top(paper_height)
+  return paper_height - CM_PER_INCH - tex.voffset * CM_PER_SCALED_POINT - dimension_cm("topmargin")
+    - dimension_cm("headheight") - dimension_cm("headsep")
+end
+
+local function warn_once_if_narrow(column_width)
+  if column_width < NARROWEST_COLUMN_CM and not has_warned_of_narrow_column then
+    has_warned_of_narrow_column = true
+    warn(string.format("the vine's column is %.1f cm wide; below %.1f cm its leaves and bunches overhang it", column_width,
+      NARROWEST_COLUMN_CM))
+  end
+end
 
 -- the page layout, in cm from the lower-left corner of the paper. The vine grows in the
 -- wider side margin: when that is the right one (the outer margin of a right-hand page in a
 -- two-sided document), the layout is made for the mirrored page and drawn reflected
--- (g.mirror; ink.page_transform)
-M.twoside = false                             -- \if@twoside, set at each shipout
-M.width = nil                                 -- width=, \florilegiumgrapeswidth: the column's width in cm, from the text out; nil the whole margin
-M.MINWIDTH = 4.4                              -- the narrowest column the vine is drawn small enough for
-function M.geometry()
-  local inch = 2.54
-  local even = M.twoside and tex.count[0] % 2 == 0
-  local g = {
-    pw = cm("paperwidth"), ph = cm("paperheight"),
-    textleft = inch + tex.hoffset * SP_CM + cm(even and "evensidemargin" or "oddsidemargin"),
-  }
-  g.textright = g.textleft + cm("textwidth")
-  if g.pw - g.textright > g.textleft + 0.05 then
-    g.mirror = true
-    g.textleft, g.textright = g.pw - g.textright, g.pw - g.textleft
+local function page_layout(page_number)
+  local layout = { paper_width = dimension_cm("paperwidth"), paper_height = dimension_cm("paperheight"),
+    text_left = text_left_edge(page_number) }
+  layout.text_right = layout.text_left + dimension_cm("textwidth")
+  if layout.paper_width - layout.text_right > layout.text_left + 0.05 then
+    layout.mirrored = true
+    layout.text_left, layout.text_right = layout.paper_width - layout.text_right, layout.paper_width - layout.text_left
   end
-  g.colright = g.textleft - 0.4
-  if M.endpage == tex.count[0] then
-    local top = g.ph - inch - tex.voffset * SP_CM - cm("topmargin") - cm("headheight") - cm("headsep")
-    g.textend = top - M.endtotal * SP_CM
+  layout.column_right = layout.text_left - 0.4
+  if text_end and text_end.page_number == page_number then
+    layout.text_end_y = text_top(layout.paper_height) - text_end.depth_sp * CM_PER_SCALED_POINT
   end
-  g.colleft = M.width and math.max(0.3, g.colright - M.width) or 0.3
-  if g.colright - g.colleft < M.MINWIDTH and not M.narrow then
-    M.narrow = true
-    if luatexbase and luatexbase.module_warning then
-      luatexbase.module_warning("florilegium-grapes", string.format(
-        "the vine's column is %.1f cm wide; below %.1f cm its leaves and bunches overhang it", g.colright - g.colleft, M.MINWIDTH))
-    end
-  end
-  return g
+  layout.column_left = M.column_width_cm and math.max(MARGIN_EDGE_CM, layout.column_right - M.column_width_cm)
+    or MARGIN_EDGE_CM
+  warn_once_if_narrow(layout.column_right - layout.column_left)
+  return layout
 end
 
--- \florilegiumgrapestextend: the page the text ends on, and how far down it the text reaches (sp)
-function M.textend(page, total) M.endpage, M.endtotal = page, total end
+local function is_finite(value) return value - value == 0 end
 
--- a number the user wrote (\florilegiumgrapesseed, \florilegiumgrapesage): its value, or, when it is not
--- a number, the default, with a warning in the log
-function M.number(key, text, default)
-  local v = tonumber(text)
-  if v and v - v == 0 then return v end         -- a finite number (inf - inf and nan - nan are nan)
-  if luatexbase and luatexbase.module_warning then
-    luatexbase.module_warning("florilegium-grapes", string.format("%s{%s} is not a number; ignored", key, text))
-  end
-  return default
+-- a number the user wrote (\florilegiumgrapesseed, \florilegiumgrapesage): its value, or nil,
+-- with a warning in the log, when it is not a finite number
+function M.parse_number(command, text)
+  local value = tonumber(text)
+  if value and is_finite(value) then return value end
+  warn(string.format("%s{%s} is not a number; ignored", command, text))
+  return nil
 end
 
 -- the page's seed: from the page number, and the document's seed if it has one
-M.docseed = 0                                 -- \florilegiumgrapesseed, or 0
-function M.seed(page, fixed)
-  M.docseed = fixed and math.floor(fixed) or 0
-  return fixed and (M.docseed * 7919 + page * 131) or (page * 97 + 1030)
+function M.page_seed(page_number, document_seed)
+  if document_seed then return math.floor(document_seed) * 7919 + page_number * 131 end
+  return page_number * 97 + 1030
 end
 
--- the season: 0 spring, 0.5 summer, 1 autumn; nil is late summer. \florilegiumgrapesage sets it;
--- the option aging spreads it over the document, from the page count of the last run
-M.age = nil
-function M.auto_age(page, last) M.age = last > 1 and math.min(1, (page - 1) / (last - 1)) or 0.5 end
-
--- the variety (option vine=...)
-M.vine = "pinot"
-M.pruning = "spur"
+-- the aging option: spring on the first sheet to autumn on the last, by the sheet count of the
+-- run before
+function M.set_season_from_sheet(sheet_number, sheet_count)
+  M.season = sheet_count > 1 and math.min(1, (sheet_number - 1) / (sheet_count - 1)) or 0.5
+end
 
 -- the vine for this page, drawn into the shipout picture; an error stops this page's vine,
--- not the document
-function M.page(seed)
+-- not the document. document_seed: \florilegiumgrapesseed, or nil
+function M.draw_vine_on_page(page_number, document_seed)
   local ok, err = pcall(function()
-    local g = M.geometry()
-    g.seed, g.docseed, g.age, g.vine, g.pruning = seed, M.docseed, M.age, M.vine, M.pruning
-    vine.page(g)
+    local settings = page_layout(page_number)
+    settings.seed = M.page_seed(page_number, document_seed)
+    settings.document_seed = document_seed and math.floor(document_seed) or 0
+    settings.season, settings.variety, settings.pruning = M.season, M.variety, M.pruning
+    vine.draw_page(settings)
   end)
   if not ok then
     err = tostring(err)
